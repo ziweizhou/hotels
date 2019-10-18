@@ -4,7 +4,7 @@ Assuming you have following data structure
 
 
 ### You run these mockup to build the seed data
-```
+```ruby
   puts 'create houses'
   1.times.each do
     house = House.create!(is_master: true,
@@ -50,12 +50,12 @@ Assuming you have following data structure
 ```
 
 ### I need a function to generate each room's each date's availability
-```
+```ruby
   room = house.rooms.first
   room.availability_between_dates(Date.today, Date.today + 10.days)
 ```
    I need it to return following
-```
+```json
 {
    "total_rooms": 10,
    "start_date": "2019-10-18",
@@ -80,7 +80,7 @@ Assuming you have following data structure
 ### You need to probably loop over all the existing Booking to determine whether each date has how many room unit left. 
 * Assuming if you have following bookings
 
-```
+```ruby
 house = House.first
 room = house.rooms.first
 booking1 = Booking.new(
@@ -107,7 +107,7 @@ room.availability_between_dates("2019-10-11", "2019-10-20")
 
 ```
 * return following
-```
+```json
 {
   "total_rooms": 10,
   "start_date": "2019-10-11",
