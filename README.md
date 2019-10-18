@@ -1,6 +1,6 @@
 # hotels
 Assuming you have following data structure 
-![ERD Diagram](https://www.evernote.com/l/AB4Hff6e_XRPb6zYU07vnvJ9cgRTwL4XvM4)
+![ERD Diagram](https://github.com/ziweizhou/hotels/raw/master/src/house_erd.png)
 
 
 ### You run these mockup to build the seed data
