@@ -40,9 +40,11 @@ ActiveRecord::Schema.define(version: 2019_10_18_095330) do
   create_table "room_units", force: :cascade do |t|
     t.integer "room_no"
     t.bigint "house_id"
+    t.bigint "room_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["house_id"], name: "index_room_units_on_house_id"
+    t.index ["room_id"], name: "index_room_units_on_room_id"
   end
 
   create_table "rooms", force: :cascade do |t|
@@ -65,5 +67,6 @@ ActiveRecord::Schema.define(version: 2019_10_18_095330) do
   add_foreign_key "bookings", "rooms"
   add_foreign_key "bookings", "users"
   add_foreign_key "room_units", "houses"
+  add_foreign_key "room_units", "rooms"
   add_foreign_key "rooms", "houses"
 end
