@@ -34,6 +34,7 @@ group :development, :test do
   gem 'rspec-rails', '~> 3.8'
   gem 'faker'
   gem 'rspec-json_expectations'
+  gem 'database_cleaner'
 end
 
 group :development do

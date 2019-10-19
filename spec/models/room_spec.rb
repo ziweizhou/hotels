@@ -4,11 +4,28 @@ require 'rails_helper'
 require 'date'
 
 RSpec.describe Room, type: :model do
+  before(:each) do
+   DatabaseCleaner.clean
+  end
   context '#availability_between_dates' do
     it 'returns available dates' do
+      # Arrange
+      house = House.create!(name: Faker::GameOfThrones.character)
+      guest = User.create(name: Faker::Name.name,email: Faker::Internet.email,phone: Faker::PhoneNumber.cell_phone)
+      room = house.rooms.create!(name: Faker::GameOfThrones.character)
+      10.times.each do
+        room.room_units.create!(room_no: Faker::Number.number(4), house: house)
+      end
+      Booking.create!(dtstart: "2019-10-11", dtend: "2019-10-12", house: house, room: room, user: guest)
+      Booking.create!(dtstart: "2019-10-13", dtend: "2019-10-14", house: house, room: room, user: guest)
+      Booking.create!(dtstart: "2019-10-16", dtend: "2019-10-20", house: house, room: room, user: guest)
+      
+      # Act
       dtstart = Date.iso8601('2019-10-18')
       dtend = Date.iso8601('2019-10-27')
       available_dates = Room.first.availability_between_dates(dtstart, dtend)
+
+      # Assert
       expect(available_dates).to include_json({
         total_rooms: 10,
         start_date: '2019-10-18',
