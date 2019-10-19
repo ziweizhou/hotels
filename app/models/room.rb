@@ -27,8 +27,8 @@ class Room < ApplicationRecord
 
     {
         total_rooms: total_rooms,
-        "start_date": "2019-10-11",
-        "end_date": "2020-10-20",
+        start_date: dtstart.strftime('%Y-%m-%d'),
+        end_date: dtend.strftime('%Y-%m-%d'),
         payload: payload
     }
   end
