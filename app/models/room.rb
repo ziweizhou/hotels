@@ -15,7 +15,7 @@ class Room < ApplicationRecord
             WITH current_room_bookings AS
           ( SELECT *
             FROM bookings
-            WHERE (bookings.dtstart >= #{san_dtstart}  AND bookings.dtstart < #{san_dtsend})
+            WHERE bookings.house_id =  #{self.house_id} and (bookings.dtstart >= #{san_dtstart}  AND bookings.dtstart < #{san_dtsend})
              OR (bookings.dtend > #{san_dtstart}  AND bookings.dtend <= #{san_dtsend})
            ),
 
