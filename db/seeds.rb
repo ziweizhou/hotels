@@ -26,6 +26,7 @@ House.destroy_all
     10.times.each do
       room.room_units.create!(room_no: Faker::Number.number(4), house: house)
     end
+
     puts "create bookings"
     20.times.each do
       future_dtstart = Date.current.tomorrow + rand(10)

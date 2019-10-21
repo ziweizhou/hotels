@@ -8,6 +8,7 @@ class CreateBookings < ActiveRecord::Migration[5.2]
       t.date :dtend
       t.references :house, foreign_key: true
       t.references :room, foreign_key: true
+      t.references :room_unit, foreign_key: true
       t.references :user, foreign_key: true
 
       t.timestamps
