@@ -23,8 +23,9 @@ House.destroy_all
         name: Faker::GameOfThrones.character
     )
     #each room type will have 10 rooms
+    room_units = []
     10.times.each do
-      room.room_units.create!(room_no: Faker::Number.number(4), house: house)
+      room_units << room.room_units.create!(room_no: Faker::Number.number(4), house: house)
     end
 
     puts "create bookings"
@@ -46,6 +47,7 @@ House.destroy_all
             description: Faker::Lorem.paragraph,
             status: :confirmed,
             user: guest,
+            room_unit: room_units.sample,
             dtstart: dtstart,
             dtend: dtend
         )

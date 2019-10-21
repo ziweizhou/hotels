@@ -23,11 +23,13 @@ ActiveRecord::Schema.define(version: 2019_10_21_044700) do
     t.date "dtend"
     t.bigint "house_id"
     t.bigint "room_id"
+    t.bigint "room_unit_id"
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["house_id"], name: "index_bookings_on_house_id"
     t.index ["room_id"], name: "index_bookings_on_room_id"
+    t.index ["room_unit_id"], name: "index_bookings_on_room_unit_id"
     t.index ["user_id"], name: "index_bookings_on_user_id"
   end
 
@@ -65,6 +67,7 @@ ActiveRecord::Schema.define(version: 2019_10_21_044700) do
   end
 
   add_foreign_key "bookings", "houses"
+  add_foreign_key "bookings", "room_units"
   add_foreign_key "bookings", "rooms"
   add_foreign_key "bookings", "users"
   add_foreign_key "room_units", "houses"

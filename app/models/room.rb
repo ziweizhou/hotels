@@ -11,16 +11,29 @@ class Room < ApplicationRecord
     san_dtstart = connection.quote(dtstart.strftime('%m/%d/%Y'))
     san_dtsend = connection.quote(dtend.strftime('%m/%d/%Y'))
     bookings = connection.execute("
-        with current_room_bookings as (
-          select * from bookings 
-          where bookings.room_id = #{self.id} and bookings.dtstart >= #{san_dtstart} and bookings.dtend < #{san_dtsend}
-        )
-        select series, case when bookings.room_id is null then 0 else count(*) end as count
-        from generate_series(#{san_dtstart},#{san_dtsend},interval '1 day') series
-        left join current_room_bookings bookings
-        on series >= bookings.dtstart and  series < bookings.dtend 
-        group by series, bookings.room_id
-        order by series").to_a
+              WITH current_room_bookings AS (
+                 SELECT *
+                 FROM bookings
+                 WHERE bookings.room_id = #{self.id}
+                   AND bookings.dtstart >= #{san_dtstart} and bookings.dtend < #{san_dtsend}
+                 ),
+
+                 current_room_blocks AS
+                (SELECT DISTINCT a.room_unit_id,
+                                 c.id
+                 FROM current_room_bookings A
+                 INNER JOIN room_units B ON a.room_unit_id = b.id
+                 LEFT JOIN room_units C ON c.id = b.part_of_room_id
+                 OR c.part_of_room_id = b.id)
+
+              SELECT series,
+                     Count(DISTINCT bookings.room_unit_id) + Count(DISTINCT blocks.id) as count
+              FROM generate_series(#{san_dtstart},#{san_dtsend},interval '1 day') series
+              LEFT JOIN current_room_bookings bookings ON series >= bookings.dtstart
+              AND series < bookings.dtend
+              LEFT JOIN current_room_blocks blocks ON bookings.room_unit_id = blocks.room_unit_id
+              GROUP BY series
+              ORDER BY series").to_a
     total_rooms = self.room_units.count
 
     payload = bookings.map do |booking|
