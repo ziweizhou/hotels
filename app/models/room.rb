@@ -8,20 +8,29 @@ class Room < ApplicationRecord
   def availability_between_dates(dtstart, dtend)
     current_room_bookings = Booking.where('room_id = ? AND ((dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?))',
                                           self.id, dtstart, dtend, dtstart, dtend)
-    
+                                .map {|r|  {:dtstart => r.dtstart, :dtend => r.dtend}}
     total_rooms = self.room_units.count
 
-    current_room_bookings = current_room_bookings.map {|r|  {:dtstart => r.dtstart, :dtend => r.dtend, :count => 1}}
-    date_range = (dtstart..dtend).to_a.map {|r|  {:series => r, :count => nil}}
-    
-    # merge bookings and date ranges
-    payload = date_range.map { |range| range.merge(current_room_bookings.find { |booking| range[:series] >= booking[:dtstart] && range[:series] < booking[:dtend] }  || {}) }
+    # join date range and bookings
+    date_range = (dtstart..dtend).to_a.map {|r|  {:series => r}}
+    payload = []
+    date_range.each do |range|
+      bookings = current_room_bookings.select { |booking| range[:series] >= booking[:dtstart] && range[:series] < booking[:dtend]} || []
+      bookings.each do |booking|
+        payload << booking.merge({series: range[:series], count: 1})
+      end
+      payload << {:series => range[:series], :count => nil} if bookings.empty?
+    end
+
+    # group by date and calculate the allotment
     payload = payload.group_by{|r| r[:series]}.map do |key, values|
       {
           date: key.strftime('%Y-%m-%d'),
           allotment: total_rooms - values.select{|r| r[:count] == 1}.count
       }
     end
+
+    # return availability
     {
         total_rooms: total_rooms,
         start_date: dtstart.strftime('%Y-%m-%d'),

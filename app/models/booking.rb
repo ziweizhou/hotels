@@ -18,8 +18,10 @@ class Booking < ApplicationRecord
     connected_rooms += self.room_unit.consist_of_rooms
 
     connected_rooms.compact.each do |connected_room|
-      Booking.find_or_initialize_by(dtstart: self.dtstart, dtend: self.dtstart, house: self.house, room: connected_room.room, room_unit: connected_room)
-          .update(user: self.user, status: :blocked)
+      unless Booking.where('room_unit_id = ? AND ((dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?))',
+                         connected_room.id, self.dtstart, self.dtend, self.dtstart, self.dtend).present?
+        Booking.create(dtstart: self.dtstart, dtend: self.dtend, house: self.house, room: connected_room.room, room_unit: connected_room, user: self.user, status: :blocked)
+      end
     end
 
   end
