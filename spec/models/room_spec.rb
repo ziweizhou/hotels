@@ -110,16 +110,16 @@ RSpec.describe Room, type: :model do
         #       /     \
         #     A        B
 
-        unitC = room.room_units.create!(room_no: Faker::Number.number(4), house: house)
+        unitC = room.room_units.create!(room_no: Faker::Number.number(4), house: house, virtual: true)
         unitA = room.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
         unitB = room.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
 
-        Booking.create!(dtstart: "2019-10-11", dtend: "2019-10-12", house: house, room: room, room_unit: unitA, user: guest) # Book A, Block C
-        Booking.create!(dtstart: "2019-10-12", dtend: "2019-10-13", house: house, room: room, room_unit: unitB, user: guest) # Book B, Block C
+        Booking.create!(dtstart: "2019-10-11", dtend: "2019-10-12", house: house, room: room, room_unit: unitA, user: guest) # Book A
+        Booking.create!(dtstart: "2019-10-12", dtend: "2019-10-13", house: house, room: room, room_unit: unitB, user: guest) # Book B
         Booking.create!(dtstart: "2019-10-13", dtend: "2019-10-14", house: house, room: room, room_unit: unitC, user: guest) # Book C, Block A and B
 
-        Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-17", house: house, room: room, room_unit: unitA, user: guest) # Book A, Block C (3 days)
-        Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-15", house: house, room: room, room_unit: unitB, user: guest) # Book B - No block since C is already blocked
+        Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-17", house: house, room: room, room_unit: unitA, user: guest) # Book A
+        Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-15", house: house, room: room, room_unit: unitB, user: guest) # Book B
 
         # Act
         dtstart = Date.iso8601('2019-10-10')
@@ -154,7 +154,7 @@ RSpec.describe Room, type: :model do
         #       /     \
         #     A(R1)    B(R2)     D(R2)
 
-        unitC = room1.room_units.create!(room_no: Faker::Number.number(4), house: house)
+        unitC = room1.room_units.create!(room_no: Faker::Number.number(4), house: house, virtual: true)
         unitA = room1.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
         unitB = room2.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
         unitD = room2.room_units.create!(room_no: Faker::Number.number(4), house: house)

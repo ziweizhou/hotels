@@ -41,6 +41,7 @@ ActiveRecord::Schema.define(version: 2019_10_21_044700) do
 
   create_table "room_units", force: :cascade do |t|
     t.integer "room_no"
+    t.boolean "virtual", default: false
     t.bigint "house_id"
     t.bigint "room_id"
     t.datetime "created_at", null: false

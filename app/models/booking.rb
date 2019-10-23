@@ -4,8 +4,11 @@ class Booking < ApplicationRecord
   belongs_to :room_unit
   belongs_to :user
 
+  belongs_to :parent, class_name: 'Booking', optional: true
+  has_many :children, class_name: 'Booking', foreign_key: :parent_booking_id
+
   after_initialize :init
-  after_create :block_connected_rooms, if: Proc.new {|booking|  booking.status == 'confirmed'}
+  after_create :block_connected_rooms, if: Proc.new {|booking|  booking.status == 'confirmed' && booking.room_unit.virtual}
 
   private
   def init
