@@ -9,6 +9,7 @@ class Booking < ApplicationRecord
 
   after_initialize :init
   after_create :block_connected_rooms, if: Proc.new {|booking|  booking.status == 'confirmed' && booking.room_unit.virtual}
+  after_destroy :destroy_connected_bookings
 
   private
   def init
@@ -16,16 +17,24 @@ class Booking < ApplicationRecord
   end
 
   def block_connected_rooms
-    connected_rooms = []
-    connected_rooms << self.room_unit.part_of_room
-    connected_rooms += self.room_unit.consist_of_rooms
-
-    connected_rooms.compact.each do |connected_room|
+    room_unit.consist_of_rooms.each do |connected_room|
       unless Booking.where('room_unit_id = ? AND ((dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?))',
                          connected_room.id, self.dtstart, self.dtend, self.dtstart, self.dtend).present?
-        Booking.create(dtstart: self.dtstart, dtend: self.dtend, house: self.house, room: connected_room.room, room_unit: connected_room, user: self.user, status: :blocked)
+        Booking.create(dtstart: self.dtstart,
+                       dtend: self.dtend,
+                       house: self.house,
+                       room: connected_room.room,
+                       room_unit: connected_room,
+                       user: self.user,
+                       status: :blocked,
+                       parent_booking_id: self.id)
       end
     end
+  end
 
+  def destroy_connected_bookings
+    self.children.each do |booking|
+      booking.destroy
+    end
   end
 end

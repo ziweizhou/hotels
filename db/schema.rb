@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_10_21_044700) do
+ActiveRecord::Schema.define(version: 2019_10_18_095330) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -21,6 +21,7 @@ ActiveRecord::Schema.define(version: 2019_10_21_044700) do
     t.string "status"
     t.date "dtstart"
     t.date "dtend"
+    t.integer "parent_booking_id"
     t.bigint "house_id"
     t.bigint "room_id"
     t.bigint "room_unit_id"
@@ -41,12 +42,12 @@ ActiveRecord::Schema.define(version: 2019_10_21_044700) do
 
   create_table "room_units", force: :cascade do |t|
     t.integer "room_no"
+    t.integer "part_of_room_id"
     t.boolean "virtual", default: false
     t.bigint "house_id"
     t.bigint "room_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "part_of_room_id"
     t.index ["house_id"], name: "index_room_units_on_house_id"
     t.index ["room_id"], name: "index_room_units_on_room_id"
   end
