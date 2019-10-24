@@ -99,66 +99,128 @@ RSpec.describe Room, type: :model do
                                               })
     end
 
-    context 'connected room units' do
-      it "across room types" do
-        # Arrange
-        house = House.create!(name: Faker::GameOfThrones.character)
-        guest = User.create(name: Faker::Name.name,email: Faker::Internet.email,phone: Faker::PhoneNumber.cell_phone)
-        roomAB = house.rooms.create!(name: Faker::GameOfThrones.character)
-        roomC = house.rooms.create!(name: Faker::GameOfThrones.character)
+    it "connected room units across room types" do
+      # Arrange
+      house = House.create!(name: Faker::GameOfThrones.character)
+      guest = User.create(name: Faker::Name.name,email: Faker::Internet.email,phone: Faker::PhoneNumber.cell_phone)
+      roomAB = house.rooms.create!(name: Faker::GameOfThrones.character)
+      roomC = house.rooms.create!(name: Faker::GameOfThrones.character)
 
-        #          C
-        #       /     \
-        #     A        B
+      #          C
+      #       /     \
+      #     A        B
 
-        unitC = roomC.room_units.create!(room_no: Faker::Number.number(4), house: house, virtual: true)
-        unitA = roomAB.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
-        unitB = roomAB.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
+      unitC = roomC.room_units.create!(room_no: Faker::Number.number(4), house: house, virtual: true)
+      unitA = roomAB.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
+      unitB = roomAB.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
 
-        Booking.create!(dtstart: "2019-10-11", dtend: "2019-10-12", house: house, room: roomAB, room_unit: unitA, user: guest) # Book A
-        Booking.create!(dtstart: "2019-10-12", dtend: "2019-10-13", house: house, room: roomAB, room_unit: unitB, user: guest) # Book B
-        Booking.create!(dtstart: "2019-10-13", dtend: "2019-10-14", house: house, room: roomC, room_unit: unitC, user: guest) # Book C, Block A and B
+      Booking.create!(dtstart: "2019-10-11", dtend: "2019-10-12", house: house, room: roomAB, room_unit: unitA, user: guest) # Book A
+      Booking.create!(dtstart: "2019-10-12", dtend: "2019-10-13", house: house, room: roomAB, room_unit: unitB, user: guest) # Book B
+      Booking.create!(dtstart: "2019-10-13", dtend: "2019-10-14", house: house, room: roomC, room_unit: unitC, user: guest) # Book C, Block A and B
 
-        Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-17", house: house, room: roomAB, room_unit: unitA, user: guest) # Book A
-        Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-15", house: house, room: roomAB, room_unit: unitB, user: guest) # Book B
+      Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-17", house: house, room: roomAB, room_unit: unitA, user: guest) # Book A
+      Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-15", house: house, room: roomAB, room_unit: unitB, user: guest) # Book B
 
-        # Act
-        dtstart = Date.iso8601('2019-10-10')
-        dtend = Date.iso8601('2019-10-18')
-        roomC_available_dates = roomC.availability_between_dates(dtstart, dtend)
-        roomAB_available_dates = roomAB.availability_between_dates(dtstart, dtend)
+      # Act
+      dtstart = Date.iso8601('2019-10-10')
+      dtend = Date.iso8601('2019-10-18')
+      roomC_available_dates = roomC.availability_between_dates(dtstart, dtend)
+      roomAB_available_dates = roomAB.availability_between_dates(dtstart, dtend)
 
-        # Assert
-        expect(roomC_available_dates).to include_json({
-                                                    total_rooms: 1,
-                                                    start_date: '2019-10-10',
-                                                    end_date: '2019-10-18',
-                                                    payload: [
-                                                        {:allotment=>1, :date=>"2019-10-10"},
-                                                        {:allotment=>0, :date=>"2019-10-11"},
-                                                        {:allotment=>0, :date=>"2019-10-12"},
-                                                        {:allotment=>0, :date=>"2019-10-13"},
-                                                        {:allotment=>0, :date=>"2019-10-14"},
-                                                        {:allotment=>0, :date=>"2019-10-15"},
-                                                        {:allotment=>0, :date=>"2019-10-16"},
-                                                        {:allotment=>1, :date=>"2019-10-17"}]
-                                                })
+      # Assert
+      expect(roomC_available_dates).to include_json({
+                                                        total_rooms: 1,
+                                                        start_date: '2019-10-10',
+                                                        end_date: '2019-10-18',
+                                                        payload: [
+                                                            {:allotment=>1, :date=>"2019-10-10"},
+                                                            {:allotment=>0, :date=>"2019-10-11"},
+                                                            {:allotment=>0, :date=>"2019-10-12"},
+                                                            {:allotment=>0, :date=>"2019-10-13"},
+                                                            {:allotment=>0, :date=>"2019-10-14"},
+                                                            {:allotment=>0, :date=>"2019-10-15"},
+                                                            {:allotment=>0, :date=>"2019-10-16"},
+                                                            {:allotment=>1, :date=>"2019-10-17"}]
+                                                    })
 
-        expect(roomAB_available_dates).to include_json({
-                                                          total_rooms: 2,
-                                                          start_date: '2019-10-10',
-                                                          end_date: '2019-10-18',
-                                                          payload: [
-                                                              {:allotment=>2, :date=>"2019-10-10"},
-                                                              {:allotment=>1, :date=>"2019-10-11"},
-                                                              {:allotment=>1, :date=>"2019-10-12"},
-                                                              {:allotment=>0, :date=>"2019-10-13"},
-                                                              {:allotment=>0, :date=>"2019-10-14"},
-                                                              {:allotment=>1, :date=>"2019-10-15"},
-                                                              {:allotment=>1, :date=>"2019-10-16"},
-                                                              {:allotment=>2, :date=>"2019-10-17"}]
-                                                      })
-      end
+      expect(roomAB_available_dates).to include_json({
+                                                         total_rooms: 2,
+                                                         start_date: '2019-10-10',
+                                                         end_date: '2019-10-18',
+                                                         payload: [
+                                                             {:allotment=>2, :date=>"2019-10-10"},
+                                                             {:allotment=>1, :date=>"2019-10-11"},
+                                                             {:allotment=>1, :date=>"2019-10-12"},
+                                                             {:allotment=>0, :date=>"2019-10-13"},
+                                                             {:allotment=>0, :date=>"2019-10-14"},
+                                                             {:allotment=>1, :date=>"2019-10-15"},
+                                                             {:allotment=>1, :date=>"2019-10-16"},
+                                                             {:allotment=>2, :date=>"2019-10-17"}]
+                                                     })
+    end
+
+    it "ignore overlap bookings" do
+      # Arrange
+      house = House.create!(name: Faker::GameOfThrones.character)
+      guest = User.create(name: Faker::Name.name,email: Faker::Internet.email,phone: Faker::PhoneNumber.cell_phone)
+      roomAB = house.rooms.create!(name: Faker::GameOfThrones.character)
+      roomC = house.rooms.create!(name: Faker::GameOfThrones.character)
+
+      #          C
+      #       /     \
+      #     A        B
+
+      unitC = roomC.room_units.create!(room_no: Faker::Number.number(4), house: house, virtual: true)
+      unitA = roomAB.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
+      unitB = roomAB.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
+
+      Booking.create!(dtstart: "2019-10-11", dtend: "2019-10-12", house: house, room: roomAB, room_unit: unitA, user: guest) # Book A
+      Booking.create!(dtstart: "2019-10-12", dtend: "2019-10-13", house: house, room: roomAB, room_unit: unitB, user: guest) # Book B
+      Booking.create!(dtstart: "2019-10-13", dtend: "2019-10-14", house: house, room: roomC, room_unit: unitC, user: guest) # Book C, Block A and B
+
+      Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-17", house: house, room: roomAB, room_unit: unitA, user: guest) # Book A
+      Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-15", house: house, room: roomAB, room_unit: unitB, user: guest) # Book B
+
+      # overlaps
+      Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-17", house: house, room: roomAB, room_unit: unitA, user: guest) # Book A
+      Booking.create!(dtstart: "2019-10-14", dtend: "2019-10-15", house: house, room: roomAB, room_unit: unitB, user: guest) # Book B
+
+      # Act
+      dtstart = Date.iso8601('2019-10-10')
+      dtend = Date.iso8601('2019-10-18')
+      roomC_available_dates = roomC.availability_between_dates(dtstart, dtend)
+      roomAB_available_dates = roomAB.availability_between_dates(dtstart, dtend)
+
+      # Assert
+      expect(roomC_available_dates).to include_json({
+                                                        total_rooms: 1,
+                                                        start_date: '2019-10-10',
+                                                        end_date: '2019-10-18',
+                                                        payload: [
+                                                            {:allotment=>1, :date=>"2019-10-10"},
+                                                            {:allotment=>0, :date=>"2019-10-11"},
+                                                            {:allotment=>0, :date=>"2019-10-12"},
+                                                            {:allotment=>0, :date=>"2019-10-13"},
+                                                            {:allotment=>0, :date=>"2019-10-14"},
+                                                            {:allotment=>0, :date=>"2019-10-15"},
+                                                            {:allotment=>0, :date=>"2019-10-16"},
+                                                            {:allotment=>1, :date=>"2019-10-17"}]
+                                                    })
+
+      expect(roomAB_available_dates).to include_json({
+                                                         total_rooms: 2,
+                                                         start_date: '2019-10-10',
+                                                         end_date: '2019-10-18',
+                                                         payload: [
+                                                             {:allotment=>2, :date=>"2019-10-10"},
+                                                             {:allotment=>1, :date=>"2019-10-11"},
+                                                             {:allotment=>1, :date=>"2019-10-12"},
+                                                             {:allotment=>0, :date=>"2019-10-13"},
+                                                             {:allotment=>0, :date=>"2019-10-14"},
+                                                             {:allotment=>1, :date=>"2019-10-15"},
+                                                             {:allotment=>1, :date=>"2019-10-16"},
+                                                             {:allotment=>2, :date=>"2019-10-17"}]
+                                                     })
     end
   end
 end

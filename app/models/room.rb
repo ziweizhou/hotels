@@ -12,13 +12,15 @@ class Room < ApplicationRecord
     san_dtsend = connection.quote(dtend.strftime('%m/%d/%Y'))
 
     sql = <<-SQL
+          -- Get active bookings in the range
           with current_booking as (
           select * from bookings b
           inner join generate_series(TIMESTAMP  #{san_dtstart} , TIMESTAMP #{san_dtsend},'1 day') series
           on series >= b.dtstart AND series < b.dtend 
-            where b.house_id = 1 
+            where b.house_id = 1 and status in (#{connection.quote(:confirmed)},#{connection.quote(:blocked)})
           ),
 
+          -- Find if there is blocked bookings in connected units (child)
           child as (
           select series,
                COUNT(b.id) booking
@@ -28,9 +30,10 @@ class Room < ApplicationRecord
           inner join current_booking b
           on b.room_unit_id = child.id
           group by series
-          ) 
+          ),
 
-          ,parent as (
+          -- Find parent bookings
+          parent as (
           select series,
                COUNT(parent.id) booking
           from  room_units parent
@@ -39,10 +42,13 @@ class Room < ApplicationRecord
           group by series
           )
 
+          -- Final result set
           select  dates,
-          		case when (parent.booking is null or parent.booking = 0) then
-                  case when (child.booking is null or child.booking = 0) then 0 else 1 end
-              else parent.booking end as count 
+          		case when (parent.booking is null or parent.booking = 0) then -- If parent is empty then check if child is blocked
+                  case when (child.booking is null or child.booking = 0)  -- If child is blocked consider parent as booked
+                      then 0 else 1 
+                  end
+              else parent.booking end as count -- If parent is not empty take its count
           from generate_series(TIMESTAMP  #{san_dtstart} , TIMESTAMP #{san_dtsend},'1 day') dates
           left join parent
           on parent.series = dates

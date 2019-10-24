@@ -56,6 +56,34 @@ RSpec.describe Booking, type: :model do
       expect(bookings.count).to eql(1)
       expect(bookings[0].status).to eql('confirmed')
     end
+
+    it 'should create overlap bookings when an existing booking exists' do
+      # Arrange
+      house = House.create!(name: Faker::GameOfThrones.character)
+      guest = User.create(name: Faker::Name.name,email: Faker::Internet.email,phone: Faker::PhoneNumber.cell_phone)
+      room = house.rooms.create!(name: Faker::GameOfThrones.character)
+
+      #          C
+      #       /     \
+      #     A        B
+
+      unitC = room.room_units.create!(room_no: Faker::Number.number(4), house: house, virtual: true)
+      unitA = room.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
+      unitB = room.room_units.create!(room_no: Faker::Number.number(4), house: house, part_of_room:  unitC)
+
+
+      Booking.create!(dtstart: "2019-10-11", dtend: "2019-10-12", house: house, room: room, room_unit: unitC, user: guest) # Book C, Block A and B
+
+      # Act
+      Booking.create!(dtstart: "2019-10-11", dtend: "2019-10-12", house: house, room: room, room_unit: unitC, user: guest) # Book C, Block A and B
+
+      # Assert
+      bookings = Booking.all.to_a
+      expect(bookings.count).to eql(6)
+      expect(bookings.select{ |r| r.room_unit_id == unitA.id && r.status == 'overlap'}.count).to eql(1)
+      expect(bookings.select{ |r| r.room_unit_id == unitB.id && r.status == 'overlap'}.count).to eql(1)
+      expect(bookings.select{ |r| r.room_unit_id == unitC.id && r.status == 'overlap'}.count).to eql(1)
+    end
   end
 
   context '#destroy' do
