@@ -9,8 +9,9 @@ class Booking < ApplicationRecord
 
   after_initialize :init
   before_create :check_overlap, if: Proc.new {|booking|  booking.status == 'confirmed'}
-  after_create :block_connected_rooms, if: Proc.new {|booking| booking.room_unit.virtual}
-  after_destroy :destroy_connected_bookings
+  after_create :create_connected_bookings, if: Proc.new {|booking| booking.room_unit.virtual}
+  after_update :update_connected_bookings, if: Proc.new {|booking| booking.room_unit.virtual}
+  after_destroy :destroy_connected_bookings, if: Proc.new {|booking| booking.room_unit.virtual}
 
   private
   def init
@@ -18,13 +19,14 @@ class Booking < ApplicationRecord
   end
 
   def check_overlap
+    # todo check for connected units
     if Booking.where('room_unit_id = ? AND ((dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)) AND status in (?,?) ',
                          self.room_unit_id, self.dtstart, self.dtend, self.dtstart, self.dtend, :confirmed, :blocked).present?
       self.status = 'overlap'
     end
   end
 
-  def block_connected_rooms
+  def create_connected_bookings
     room_unit.consist_of_rooms.each do |connected_room|
       Booking.create(dtstart: self.dtstart,
                      dtend: self.dtend,
@@ -37,9 +39,18 @@ class Booking < ApplicationRecord
     end
   end
 
-  def destroy_connected_bookings
+  def update_connected_bookings
+    # todo
     self.children.each do |booking|
-      booking.destroy
+      booking.update(dtstart: self.dtstart,
+                     dtend: self.dtend,
+                     user: self.user,
+                     status: self.status == 'confirmed' ? :blocked :  self.status
+      )
     end
+  end
+
+  def destroy_connected_bookings
+    self.children.destroy_all
   end
 end
