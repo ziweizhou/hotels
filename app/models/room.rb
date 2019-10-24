@@ -6,36 +6,67 @@ class Room < ApplicationRecord
   has_many :bookings
 
   def availability_between_dates(dtstart, dtend)
-    current_room_bookings = Booking.where('room_id = ? AND ((dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?))',
-                                          self.id, dtstart, dtend, dtstart, dtend)
-                                .map {|r|  {:dtstart => r.dtstart, :dtend => r.dtend}}
+    # sanitize inputs
+    connection = ActiveRecord::Base.connection
+    san_dtstart = connection.quote(dtstart.strftime('%m/%d/%Y'))
+    san_dtsend = connection.quote(dtend.strftime('%m/%d/%Y'))
+
+    sql = <<-SQL
+          with current_booking as (
+          select * from bookings b
+          inner join generate_series(TIMESTAMP  #{san_dtstart} , TIMESTAMP #{san_dtsend},'1 day') series
+          on series >= b.dtstart AND series < b.dtend 
+            where b.house_id = 1 
+          ),
+
+          child as (
+          select series,
+               COUNT(b.id) booking
+          from  room_units parent
+          inner join room_units child
+          on parent.id = child.part_of_room_id and parent.room_id = #{self.id} 
+          inner join current_booking b
+          on b.room_unit_id = child.id
+          group by series
+          ) 
+
+          ,parent as (
+          select series,
+               COUNT(parent.id) booking
+          from  room_units parent
+          inner join current_booking b
+          on b.room_unit_id = parent.id and parent.room_id = #{self.id} 
+          group by series
+          )
+
+          select  dates,
+          		case when (parent.booking is null or parent.booking = 0) then
+                  case when (child.booking is null or child.booking = 0) then 0 else 1 end
+              else parent.booking end as count 
+          from generate_series(TIMESTAMP  #{san_dtstart} , TIMESTAMP #{san_dtsend},'1 day') dates
+          left join parent
+          on parent.series = dates
+          left join  child
+          on child.series = dates
+          order by dates
+    SQL
+
+    bookings = connection.execute(sql).to_a
     total_rooms = self.room_units.count
 
-    # join date range and bookings
-    date_range = (dtstart..dtend).to_a.map {|r|  {:series => r}}
-    payload = []
-    date_range.each do |range|
-      bookings = current_room_bookings.select { |booking| range[:series] >= booking[:dtstart] && range[:series] < booking[:dtend]} || []
-      bookings.each do |booking|
-        payload << booking.merge({series: range[:series], count: 1})
-      end
-      payload << {:series => range[:series], :count => nil} if bookings.empty?
-    end
 
-    # group by date and calculate the allotment
-    payload = payload.group_by{|r| r[:series]}.map do |key, values|
+    payload = bookings.map do |booking|
       {
-          date: key.strftime('%Y-%m-%d'),
-          allotment: total_rooms - values.select{|r| r[:count] == 1}.count
+          date: Date.parse(booking['dates']).strftime('%Y-%m-%d'),
+          allotment: total_rooms - booking['count']
       }
     end
 
-    # return availability
     {
         total_rooms: total_rooms,
         start_date: dtstart.strftime('%Y-%m-%d'),
         end_date: dtend.strftime('%Y-%m-%d'),
-        payload: payload.sort_by {|r| r[:date]}
+        payload: payload
     }
   end
 end
