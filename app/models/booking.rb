@@ -20,10 +20,14 @@ class Booking < ApplicationRecord
 
   def check_overlap
     # todo check for connected units
-    if Booking.where('room_unit_id = ? AND ((dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)) AND status in (?,?) ',
-                         self.room_unit_id, self.dtstart, self.dtend, self.dtstart, self.dtend, :confirmed, :blocked).present?
+    unless dates_available?
       self.status = 'overlap'
     end
+  end
+
+  def dates_available?
+    Booking.where('room_unit_id = ? AND ((dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)) AND status in (?,?) ',
+                  self.room_unit_id, self.dtstart, self.dtend, self.dtstart, self.dtend, :confirmed, :blocked).empty?
   end
 
   def create_connected_bookings
@@ -40,13 +44,16 @@ class Booking < ApplicationRecord
   end
 
   def update_connected_bookings
-    # todo
-    self.children.each do |booking|
-      booking.update(dtstart: self.dtstart,
-                     dtend: self.dtend,
-                     user: self.user,
-                     status: self.status == 'confirmed' ? :blocked :  self.status
-      )
+    if dates_available?
+      self.children.each do |booking|
+        booking.update(dtstart: self.dtstart,
+                       dtend: self.dtend,
+                       user: self.user,
+                       status: self.status == 'confirmed' ? :blocked :  self.status
+        )
+      end
+    else
+      Raise('Dates not available')
     end
   end
 
