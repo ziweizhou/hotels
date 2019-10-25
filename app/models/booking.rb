@@ -10,7 +10,10 @@ class Booking < ApplicationRecord
   after_initialize :init
   before_create :check_overlap, if: Proc.new {|booking|  booking.status == 'confirmed'}
   after_create :create_connected_bookings, if: Proc.new {|booking| booking.room_unit.virtual}
+  
+  before_update :update_check_availability,  if: Proc.new {|booking|  booking.status == 'confirmed'}
   after_update :update_connected_bookings, if: Proc.new {|booking| booking.room_unit.virtual}
+  
   after_destroy :destroy_connected_bookings, if: Proc.new {|booking| booking.room_unit.virtual}
 
   private
@@ -19,15 +22,21 @@ class Booking < ApplicationRecord
   end
 
   def check_overlap
-    # todo check for connected units
     unless dates_available?
       self.status = 'overlap'
     end
   end
 
   def dates_available?
-    Booking.where('room_unit_id = ? AND ((dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)) AND status in (?,?) ',
-                  self.room_unit_id, self.dtstart, self.dtend, self.dtstart, self.dtend, :confirmed, :blocked).empty?
+    parent_available = Booking.where(room_unit_id: self.room_unit_id, status: [:confirmed, :blocked])
+                           .where('(dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)',
+                            self.dtstart, self.dtend, self.dtstart, self.dtend, ).empty?
+
+    children_available = RoomUnit.joins(consist_of_rooms: [:bookings]).where(id: self.room_unit_id, bookings: {status: [:confirmed, :blocked]})
+                             .where('(dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)',
+                                    self.dtstart, self.dtend, self.dtstart, self.dtend, ).empty?
+
+    parent_available && children_available
   end
 
   def create_connected_bookings
@@ -43,17 +52,17 @@ class Booking < ApplicationRecord
     end
   end
 
+  def update_check_availability
+    raise('Dates not available') unless dates_available?
+  end
+
   def update_connected_bookings
-    if dates_available?
-      self.children.each do |booking|
-        booking.update(dtstart: self.dtstart,
-                       dtend: self.dtend,
-                       user: self.user,
-                       status: self.status == 'confirmed' ? :blocked :  self.status
-        )
-      end
-    else
-      Raise('Dates not available')
+    self.children.each do |booking|
+      booking.update(dtstart: self.dtstart,
+                     dtend: self.dtend,
+                     user: self.user,
+                     status: self.status == 'confirmed' ? :blocked :  self.status
+      )
     end
   end
 
