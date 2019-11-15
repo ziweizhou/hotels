@@ -8,24 +8,31 @@ Booking.destroy_all
 User.destroy_all
 RoomUnit.destroy_all
 Room.destroy_all
+Unit.destroy_all
+RoomType.destroy_all
 House.destroy_all
 
 1.times.each do
   house = House.create!(
-      # is_master: true,
-      # status: :listed,
-      name: Faker::GameOfThrones.character,
-      # address: Faker::Address.full_address,
-      )
+      name: Faker::GameOfThrones.character)
+  
   #each hotel will have 3 room types
   3.times.each do
-    room = house.rooms.create!( #is_master: true,
+    type = house.room_types.create!(
         name: Faker::GameOfThrones.character
     )
+
+    room = house.rooms.create!(
+        name: "#{type.name} 01",
+        room_type: type
+    )
+    
     #each room type will have 10 rooms
     room_units = []
     10.times.each do
-      room_units << room.room_units.create!(room_no: Faker::Number.number(4), house: house)
+      unit = Unit.create!(room_no: Faker::Number.number(4), house: house)
+      room_units << unit
+      RoomUnit.create!(room_id: room.id, unit_id: unit.id, house: house)
     end
 
     puts "create bookings"
@@ -42,12 +49,11 @@ House.destroy_all
         )
         booking = Booking.create(
             house: house,
-            room: room,
+            room_type: type,
             summary: Faker::GameOfThrones.character,
             description: Faker::Lorem.paragraph,
-            status: :confirmed,
+            status: :booked,
             user: guest,
-            room_unit: room_units.sample,
             dtstart: dtstart,
             dtend: dtend
         )

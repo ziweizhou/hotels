@@ -22,15 +22,15 @@ ActiveRecord::Schema.define(version: 2019_10_18_095330) do
     t.date "dtstart"
     t.date "dtend"
     t.integer "parent_booking_id"
-    t.bigint "house_id"
+    t.bigint "house_id", null: false
+    t.bigint "room_type_id", null: false
     t.bigint "room_id"
-    t.bigint "room_unit_id"
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["house_id"], name: "index_bookings_on_house_id"
     t.index ["room_id"], name: "index_bookings_on_room_id"
-    t.index ["room_unit_id"], name: "index_bookings_on_room_unit_id"
+    t.index ["room_type_id"], name: "index_bookings_on_room_type_id"
     t.index ["user_id"], name: "index_bookings_on_user_id"
   end
 
@@ -40,24 +40,42 @@ ActiveRecord::Schema.define(version: 2019_10_18_095330) do
     t.datetime "updated_at", null: false
   end
 
-  create_table "room_units", force: :cascade do |t|
-    t.integer "room_no"
-    t.integer "part_of_room_id"
-    t.boolean "virtual", default: false
-    t.bigint "house_id"
-    t.bigint "room_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["house_id"], name: "index_room_units_on_house_id"
-    t.index ["room_id"], name: "index_room_units_on_room_id"
-  end
-
-  create_table "rooms", force: :cascade do |t|
+  create_table "room_types", force: :cascade do |t|
     t.string "name"
     t.bigint "house_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["house_id"], name: "index_room_types_on_house_id"
+  end
+
+  create_table "room_units", force: :cascade do |t|
+    t.bigint "room_id"
+    t.bigint "unit_id"
+    t.bigint "house_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["house_id"], name: "index_room_units_on_house_id"
+    t.index ["room_id", "unit_id"], name: "index_room_units_on_room_id_and_unit_id", unique: true
+    t.index ["room_id"], name: "index_room_units_on_room_id"
+    t.index ["unit_id"], name: "index_room_units_on_unit_id"
+  end
+
+  create_table "rooms", force: :cascade do |t|
+    t.string "name"
+    t.bigint "room_type_id"
+    t.bigint "house_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["house_id"], name: "index_rooms_on_house_id"
+    t.index ["room_type_id"], name: "index_rooms_on_room_type_id"
+  end
+
+  create_table "units", force: :cascade do |t|
+    t.integer "room_no"
+    t.bigint "house_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["house_id"], name: "index_units_on_house_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -69,10 +87,14 @@ ActiveRecord::Schema.define(version: 2019_10_18_095330) do
   end
 
   add_foreign_key "bookings", "houses"
-  add_foreign_key "bookings", "room_units"
+  add_foreign_key "bookings", "room_types"
   add_foreign_key "bookings", "rooms"
   add_foreign_key "bookings", "users"
+  add_foreign_key "room_types", "houses"
   add_foreign_key "room_units", "houses"
   add_foreign_key "room_units", "rooms"
+  add_foreign_key "room_units", "units"
   add_foreign_key "rooms", "houses"
+  add_foreign_key "rooms", "room_types"
+  add_foreign_key "units", "houses"
 end
