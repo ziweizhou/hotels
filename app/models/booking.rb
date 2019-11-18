@@ -1,6 +1,6 @@
 class Booking < ApplicationRecord
   belongs_to :house
-  belongs_to :room
+  belongs_to :room, optional: true
   belongs_to :room_type
   belongs_to :user
 
@@ -8,13 +8,8 @@ class Booking < ApplicationRecord
   has_many :children, class_name: 'Booking', foreign_key: :parent_booking_id
 
   after_initialize :init
-  before_create :check_overlap, if: Proc.new {|booking|  booking.status == 'confirmed'}
-  after_create :create_connected_bookings, if: Proc.new {|booking| booking.room_unit.virtual}
-  
-  before_update :update_check_availability,  if: Proc.new {|booking|  booking.status == 'confirmed'}
-  after_update :update_connected_bookings, if: Proc.new {|booking| booking.room_unit.virtual}
-  
-  after_destroy :destroy_connected_bookings, if: Proc.new {|booking| booking.room_unit.virtual}
+  # before_create :check_overlap
+  # after_create :create_connected_bookings
 
   private
   def init

@@ -12,52 +12,86 @@ Unit.destroy_all
 RoomType.destroy_all
 House.destroy_all
 
-1.times.each do
-  house = House.create!(
-      name: Faker::GameOfThrones.character)
-  
-  #each hotel will have 3 room types
-  3.times.each do
-    type = house.room_types.create!(
-        name: Faker::GameOfThrones.character
-    )
+house = House.create!(name: Faker::GameOfThrones.character)
+guest = User.create(name: Faker::Name.name,email: Faker::Internet.email,phone: Faker::PhoneNumber.cell_phone)
+type_loren = house.room_types.create!(name: 'Lorent Lorch')
+type_ocean = house.room_types.create!(name: 'Ocean View')
+type_river = house.room_types.create!(name: 'River')
+type_pond = house.room_types.create!(name: 'Pond')
 
-    room = house.rooms.create!(
-        name: "#{type.name} 01",
-        room_type: type
-    )
-    
-    #each room type will have 10 rooms
-    room_units = []
-    10.times.each do
-      unit = Unit.create!(room_no: Faker::Number.number(4), house: house)
-      room_units << unit
-      RoomUnit.create!(room_id: room.id, unit_id: unit.id, house: house)
-    end
+unit_0001 = Unit.create!(room_no: 0001, house: house)
+unit_0002 = Unit.create!(room_no: 0002, house: house)
+unit_0003 = Unit.create!(room_no: 0003, house: house)
+unit_0004 = Unit.create!(room_no: 0004, house: house)
+unit_0005 = Unit.create!(room_no: 0005, house: house)
+unit_0006 = Unit.create!(room_no: 0006, house: house)
+unit_0007 = Unit.create!(room_no: 0007, house: house)
 
-    puts "create bookings"
-    20.times.each do
-      future_dtstart = Date.current.tomorrow + rand(10)
-      future_dtend = future_dtstart + (1 + rand(10))
-      past_dtend = Date.current.yesterday - rand(10)
-      past_dtstart = past_dtend - (1 + rand(10))
-      [[future_dtstart, future_dtend], [past_dtstart, past_dtend]].each do |dtstart, dtend|
-        guest = User.create(
-            name: Faker::Name.name,
-            email: Faker::Internet.email,
-            phone: Faker::PhoneNumber.cell_phone
-        )
-        booking = Booking.create(
-            house: house,
-            room_type: type,
-            summary: Faker::GameOfThrones.character,
-            description: Faker::Lorem.paragraph,
-            status: :booked,
-            user: guest,
-            dtstart: dtstart,
-            dtend: dtend
-        )
-      end
-    end
-  end
-end
+room_loren_1 = house.rooms.create!(name: 'Lorent Lorch 1', room_type: type_loren)
+RoomUnit.create!(room: room_loren_1, house: house , unit: unit_0001)
+RoomUnit.create!(room: room_loren_1, house: house , unit: unit_0002)
+
+room_loren_2 = house.rooms.create!(name: 'Lorent Lorch 2', room_type: type_loren)
+RoomUnit.create!(room: room_loren_2, house: house , unit: unit_0003)
+RoomUnit.create!(room: room_loren_2, house: house , unit: unit_0004)
+
+room_pond_1 = house.rooms.create!(name: 'Pond 1', room_type: type_pond)
+RoomUnit.create!(room: room_pond_1, house: house , unit: unit_0005)
+RoomUnit.create!(room: room_pond_1, house: house , unit: unit_0006)
+RoomUnit.create!(room: room_pond_1, house: house , unit: unit_0007)
+
+room_ocean_1 = house.rooms.create!(name: 'Ocean View 1', room_type: type_ocean)
+RoomUnit.create!(room: room_ocean_1, house: house, unit: unit_0001)
+
+room_ocean_2 = house.rooms.create!(name: 'Ocean View 2', room_type: type_ocean)
+RoomUnit.create!(room: room_ocean_2, house: house, unit: unit_0002)
+
+room_ocean_3 = house.rooms.create!(name: 'Ocean View 3', room_type: type_ocean)
+RoomUnit.create!(room: room_ocean_3, house: house, unit: unit_0003)
+
+room_river_1 = house.rooms.create!(name: 'River 1', room_type: type_river)
+RoomUnit.create!(room: room_river_1, house: house, unit: unit_0004)
+RoomUnit.create!(room: room_river_1, house: house, unit: unit_0005)
+
+room_river_2 = house.rooms.create!(name: 'River 2', room_type: type_river)
+RoomUnit.create!(room: room_river_2, house: house, unit: unit_0006)
+RoomUnit.create!(room: room_river_2, house: house, unit: unit_0007)
+
+# ╔═══╦════════════════╦══════════════╗
+# ║ 1 ║                ║ Ocean View 1 ║
+# ╠═══╣ Lorent Lorch 1 ╠══════════════╣
+# ║ 2 ║                ║ Ocean View 2 ║
+# ╠═══╬════════════════╬══════════════╣
+# ║ 3 ║ Lorent Lorch 2 ║ Ocean View 3 ║
+# ╠═══╣                ╠══════════════╣
+# ║ 4 ║                ║ River 1      ║
+# ╠═══╬════════════════╣              ║
+# ║ 5 ║ Pond 1         ║              ║
+# ╠═══╣                ╠══════════════╣
+# ║ 6 ║                ║ River 2      ║
+# ╠═══╣                ║              ║
+# ║ 7 ║                ║              ║
+# ╚═══╩════════════════╩══════════════╝
+
+# Act
+Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_ocean, user: guest) # Book "Ocean View"
+Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_river, user: guest) # Book "River"
+Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_loren, user: guest) # Book "Lorent Lorch"
+
+# ╔═══╦════════════════════╦══════════════════╗
+# ║ 1 ║                    ║ Ocean View 1     ║
+# ╠═══╣ **Lorent Lorch 1** ╠══════════════════╣
+# ║ 2 ║                    ║ Ocean View 2     ║
+# ╠═══╬════════════════════╬══════════════════╣
+# ║ 3 ║ Lorent Lorch 2     ║ **Ocean View 3** ║
+# ╠═══╣                    ╠══════════════════╣
+# ║ 4 ║                    ║ **River 1**      ║
+# ╠═══╬════════════════════╣                  ║
+# ║ 5 ║ Pond 1             ║                  ║
+# ╠═══╣                    ╠══════════════════╣
+# ║ 6 ║                    ║ River 2          ║
+# ╠═══╣                    ║                  ║
+# ║ 7 ║                    ║                  ║
+# ╚═══╩════════════════════╩══════════════════╝
+
+# Print virtual allocations

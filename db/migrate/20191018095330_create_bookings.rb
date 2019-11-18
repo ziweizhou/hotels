@@ -9,7 +9,7 @@ class CreateBookings < ActiveRecord::Migration[5.2]
       t.integer :parent_booking_id
       t.references :house, foreign_key: true, null: false
       t.references :room_type, foreign_key: true, null: false
-      t.references :room, foreign_key: true
+      t.references :room, foreign_key: true, null: true
       t.references :user, foreign_key: true
 
       t.timestamps
