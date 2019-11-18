@@ -76,7 +76,7 @@ RoomUnit.create!(room: room_river_2, house: house, unit: unit_0007)
 # Act
 Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_ocean, user: guest) # Book "Ocean View"
 Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_river, user: guest) # Book "River"
-Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_loren, user: guest) # Book "Lorent Lorch"
+Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_loren, room: room_loren_1, user: guest) # Book "Lorent Lorch"
 
 # ╔═══╦════════════════════╦══════════════════╗
 # ║ 1 ║                    ║ Ocean View 1     ║

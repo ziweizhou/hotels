@@ -8,29 +8,37 @@ class Booking < ApplicationRecord
   has_many :children, class_name: 'Booking', foreign_key: :parent_booking_id
 
   after_initialize :init
-  # before_create :check_overlap
+  # before_create :check_availablity
   # after_create :create_connected_bookings
 
   private
   def init
-    self.status  ||= :confirmed
+    self.status  ||= :unallocated
   end
 
-  def check_overlap
+  def check_availablity
     unless dates_available?
       self.status = 'overlap'
     end
   end
 
   def dates_available?
-    parent_available = Booking.where(room_unit_id: self.room_unit_id, status: [:confirmed, :blocked])
-                           .where('(dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)',
-                            self.dtstart, self.dtend, self.dtstart, self.dtend, ).empty?
+    decision_table = {}
+    
+    # get all bookings which are yet to be allocated including the current booking
+    unallocated_bookings = Booking.where(status: [:unallocated])
+    unallocated_bookings << self
+    
+    minDate = ''
+    maxDate = ''
 
-    children_available = RoomUnit.joins(consist_of_rooms: [:bookings]).where(id: self.room_unit_id, bookings: {status: [:confirmed, :blocked]})
-                             .where('(dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)',
-                                    self.dtstart, self.dtend, self.dtstart, self.dtend, ).empty?
+    # get all allocated room units and their availability
+    allocated_units = Booking.includes(room: [:units])
+                              .where(status: [:allocated])
+                              .where('(dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)',
+                                    minDate, maxDate, minDate, maxDate ).empty?
 
+    # use greedy algorithm to fit unallocated bookings into the remaining units
     parent_available && children_available
   end
 
