@@ -18,25 +18,25 @@ class Booking < ApplicationRecord
 
   def check_availablity
     unless dates_available?
-      self.status = 'overlap'
+      self.status = :unallocated
     end
   end
 
   def dates_available?
     decision_table = {}
-    
+
     # get all bookings which are yet to be allocated including the current booking
-    unallocated_bookings = Booking.where(status: [:unallocated])
+    unallocated_bookings = Booking.where(status: [:unallocated]).to_a
     unallocated_bookings << self
-    
-    minDate = ''
-    maxDate = ''
+
+    minDate = unallocated_bookings.min_by(&:dtstart).dtstart
+    maxDate =  unallocated_bookings.max_by(&:dtend).dtend
 
     # get all allocated room units and their availability
     allocated_units = Booking.includes(room: [:units])
                               .where(status: [:allocated])
                               .where('(dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)',
-                                    minDate, maxDate, minDate, maxDate ).empty?
+                                    minDate, maxDate, minDate, maxDate )
 
     # use greedy algorithm to fit unallocated bookings into the remaining units
     parent_available && children_available
