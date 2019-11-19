@@ -74,7 +74,7 @@ RSpec.describe Booking, type: :model do
       # Act
       Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_ocean, user: guest) # Book "Ocean View"
       Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_river, user: guest) # Book "River"
-      Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room: room_loren_1, status: :allocated, room_type: type_loren, user: guest) # Book "Lorent Lorch"
+      Booking.create!(dtstart: "2019-10-01", dtend: "2019-10-01", house: house, room_type: type_loren, user: guest) # Book "Lorent Lorch"
 
       # ╔═══╦════════════════════╦══════════════════╗
       # ║ 1 ║                    ║ Ocean View 1     ║
@@ -93,16 +93,7 @@ RSpec.describe Booking, type: :model do
       # ╚═══╩════════════════════╩══════════════════╝
 
       # Assert
-      unallocated_bookings = Booking.where(status: [:unallocated]).to_a
-
-      minDate = unallocated_bookings.min_by(&:dtstart).dtstart
-      maxDate =  unallocated_bookings.max_by(&:dtend).dtend
-
-      # get all allocated room units and their availability
-      allocated_units = Booking.includes(room: [:units])
-                          .where(status: [:allocated])
-                          .where('(dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)',
-                                 minDate, maxDate, minDate, maxDate ).to_a
+      allocated_units = Booking.dates_available?
       expect(Booking.count).to eql(3)
     end
   end
