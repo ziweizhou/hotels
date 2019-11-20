@@ -10,36 +10,41 @@ class Booking < ApplicationRecord
   has_many :children, class_name: 'Booking', foreign_key: :parent_booking_id
 
   after_initialize :init
-  # before_create :check_availablity
-  # after_create :create_connected_bookings
+  before_create :check_availability
 
   def init
+    @decision_table = {}
+    @allocations = []
     self.status ||= :unallocated
   end
 
-  def check_availablity
-    self.status = :unallocated unless dates_available?
+  def check_availability
+    # get all bookings which are yet to be allocated including the current booking
+    unallocated_bookings = Booking.includes(room: :room_unit).where(status: [:unallocated]).to_a.sort_by! { |b| (b.dtend - b.dtend).to_i + 1 }.reverse
+
+    unallocated_bookings << self
+    slots = get_virtual_slots(unallocated_bookings)
+    raise 'Error' if slots.count < unallocated_bookings.count
+
+    self.status = :unallocated
   end
 
-  def self.dates_available?
+  def get_virtual_slots(unallocated_bookings = nil)
+    unallocated_bookings ||= Booking.includes(room: :room_unit).where(status: [:unallocated]).to_a.sort_by! { |b| (b.dtend - b.dtend).to_i + 1 }.reverse
+    
     connection = ActiveRecord::Base.connection
-    decision_table = {}
 
     all_room_units = Unit.all.to_a
-    all_rooms = Room.includes(:room_units).map do |room|
+    all_rooms = Room.includes(:room_units, :room_type).map do |room|
       {
         id: room.id,
         name: room.name,
         room_type_id: room.room_type_id,
+        room_type: room.room_type.name,
         unit_count: room.room_units.count,
         units: room.room_units.map(&:unit_id)
       }
-    end.to_a.sort_by{|r| r[:unit_count]}
-
-    # get all bookings which are yet to be allocated including the current booking
-    unallocated_bookings = Booking.includes(room: :room_unit).where(status: [:unallocated]).to_a.sort_by! { |b| (b.dtend - b.dtend).to_i + 1 }.reverse
-
-    # unallocated_bookings << self
+    end.to_a.sort_by { |r| r[:unit_count] }
 
     minDate = unallocated_bookings.min_by(&:dtstart).dtstart
     maxDate = unallocated_bookings.max_by(&:dtend).dtend
@@ -59,30 +64,32 @@ class Booking < ApplicationRecord
     allocated_units = connection.execute(sql).to_a
     allocated_units.each do |allocation|
       all_rooms.find { |room| room[:id] == allocation['room_id'] }[:allocated] = true
-      Booking.set_decision_table(allocation['series'], allocation['unit_id'], decision_table)
+      set_decision_table(allocation['series'], allocation['unit_id'])
     end
     # use greedy algorithm to fit unallocated bookings into the remaining units
     unallocated_bookings.each do |booking|
-      raise 'not available' unless check_available(all_rooms, booking, decision_table)
+      raise 'not available' unless check_available(all_rooms, booking)
     end
-    puts decision_table
+    @allocations
   end
 
-  def self.check_available(rooms, booking, decision_table)
+  def check_available(rooms, booking)
     available = false
     found = nil
+    # search through rooms
     rooms.select { |room| room[:room_type_id] == booking.room_type_id }.each do |room|
       found = true
       if room[:allocated]
         found = false
       else
+        # see if all dates are available in the room for that booking
         booking.dtstart.upto(booking.dtend) do |series|
-          units = decision_table[series] || []
+          units = @decision_table[series] || []
           # check if all units are available
           room[:units].each do |unit|
             next unless units.include?(unit)
 
-            # then the unit is not available, move on to next
+            # the unit is not available, move on to next room
             found = false
             break
           end
@@ -90,28 +97,30 @@ class Booking < ApplicationRecord
         end
       end
       if found
-        allocate_room(room, booking, decision_table)
+        allocate_room(room, booking)
         break
       end
     end
-    
+
     found
   end
-  
-  def self.allocate_room(room, booking, decision_table)
-    puts booking
-    puts room
+
+  def allocate_room(room, booking)
+    @allocations.push({
+                        room: room,
+                        booking: booking
+                      })
     room[:allocated] = true
     room[:units].each do |unit|
       booking.dtstart.upto(booking.dtend) do |series|
-        set_decision_table(series, unit, decision_table)
+        set_decision_table(series, unit)
       end
     end
   end
 
-  def self.set_decision_table(date, unit, decision_table)
-    decision_table[date] = {} unless decision_table[date]
-    decision_table[date][unit] = true
+  def set_decision_table(date, unit)
+    @decision_table[date] = {} unless @decision_table[date]
+    @decision_table[date][unit] = true
   end
 
   def create_connected_bookings
