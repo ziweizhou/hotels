@@ -10,32 +10,57 @@ class Booking < ApplicationRecord
   has_many :children, class_name: 'Booking', foreign_key: :parent_booking_id
 
   after_initialize :init
-  before_create :check_availability
+  before_create :before_create_hook
 
   def init
-    @decision_table = {}
+    @lookup_dates_units = {}
+    @lookup_dates_rooms = {}
     @allocations = []
     self.status ||= :unallocated
   end
 
-  def check_availability
+  def before_create_hook
     # get all bookings which are yet to be allocated including the current booking
     unallocated_bookings = Booking.includes(room: :room_unit).where(status: [:unallocated]).to_a.sort_by! { |b| (b.dtend - b.dtend).to_i + 1 }.reverse
 
     unallocated_bookings << self
-    slots = get_virtual_slots(unallocated_bookings)
-    raise 'Error' if slots.count < unallocated_bookings.count
+
+    minDate = unallocated_bookings.min_by(&:dtstart).dtstart
+    maxDate = unallocated_bookings.max_by(&:dtend).dtend
+    try_virtual_allocations(unallocated_bookings, minDate, maxDate)
+    raise 'Error' if @allocations.count < unallocated_bookings.count
 
     self.status = :unallocated
   end
 
-  def get_virtual_slots(unallocated_bookings = nil)
-    unallocated_bookings ||= Booking.includes(room: :room_unit).where(status: [:unallocated]).to_a.sort_by! { |b| (b.dtend - b.dtend).to_i + 1 }.reverse
-    
-    connection = ActiveRecord::Base.connection
+  def check_availability(dtstart, dtend)
+    unallocated_bookings = Booking.includes(room: :room_unit)
+                                  .where('((dtstart >= ? AND dtstart < ?) OR (dtend > ? AND dtend <= ?)) AND status in (?) ', dtstart, dtend, dtstart, dtend, :unallocated)
+                                  .to_a.sort_by! { |b| (b.dtend - b.dtend).to_i + 1 }.reverse
 
-    all_room_units = Unit.all.to_a
-    all_rooms = Room.includes(:room_units, :room_type).map do |room|
+    try_virtual_allocations(unallocated_bookings, dtstart, dtend)
+  end
+
+  def room_status(dtstart, dtend)
+    result = []
+    @all_rooms.each do |room|
+      flag = true
+      dtstart.upto(dtend) do |series|
+        next if series == dtend
+
+        unless @lookup_dates_rooms[series] && @lookup_dates_rooms[series][room[:id]].nil?
+          flag = false
+          break
+        end
+      end
+      result << room if flag
+    end
+    result
+  end
+
+  def try_virtual_allocations(unallocated_bookings, minDate, maxDate)
+    connection = ActiveRecord::Base.connection
+    @all_rooms = Room.includes(:room_units, :room_type).map do |room|
       {
         id: room.id,
         name: room.name,
@@ -46,8 +71,7 @@ class Booking < ApplicationRecord
       }
     end.to_a.sort_by { |r| r[:unit_count] }
 
-    minDate = unallocated_bookings.min_by(&:dtstart).dtstart
-    maxDate = unallocated_bookings.max_by(&:dtend).dtend
+    @all_units = RoomUnit.all.to_a
 
     # get all allocated room units and their availability
     sql = <<-SQL
@@ -68,33 +92,33 @@ class Booking < ApplicationRecord
     end
     # use greedy algorithm to fit unallocated bookings into the remaining units
     unallocated_bookings.each do |booking|
-      raise 'not available' unless check_available(all_rooms, booking)
+      availability = check_available(booking)
+      raise 'not available' unless availability
     end
+
     @allocations
   end
 
-  def check_available(rooms, booking)
+  def check_available(booking)
     available = false
     found = nil
     # search through rooms
-    rooms.select { |room| room[:room_type_id] == booking.room_type_id }.each do |room|
+    @all_rooms.select { |room| room[:room_type_id] == booking.room_type_id && room[:status].nil? }.each do |room|
       found = true
-      if room[:allocated]
-        found = false
-      else
-        # see if all dates are available in the room for that booking
-        booking.dtstart.upto(booking.dtend) do |series|
-          units = @decision_table[series] || []
-          # check if all units are available
-          room[:units].each do |unit|
-            next unless units.include?(unit)
+      # see if all dates are available in the room for that booking
+      booking.dtstart.upto(booking.dtend) do |series|
+        next if series == booking.dtend # ignore dtend
 
-            # the unit is not available, move on to next room
-            found = false
-            break
-          end
-          break unless found
+        units = @lookup_dates_units[series] || []
+        # check if all units are available
+        room[:units].each do |unit|
+          next unless units.include?(unit)
+
+          # the unit is not available, move on to next room
+          found = false
+          break
         end
+        break unless found
       end
       if found
         allocate_room(room, booking)
@@ -106,50 +130,34 @@ class Booking < ApplicationRecord
   end
 
   def allocate_room(room, booking)
-    @allocations.push({
-                        room: room,
-                        booking: booking
-                      })
-    room[:allocated] = true
+    @allocations.push(
+      room: room,
+      booking: booking
+    )
+    booking.dtstart.upto(booking.dtend) do |series|
+      next if series == booking.dtend
+
+      set_lookup_table(@lookup_dates_rooms, series, room[:id], :ALLOCATED)
+    end
+
     room[:units].each do |unit|
       booking.dtstart.upto(booking.dtend) do |series|
-        set_decision_table(series, unit)
+        next if series == booking.dtend
+
+        set_lookup_table(@lookup_dates_units, series, unit, true) unless series == booking.dtend # ignore end date
+      end
+      @all_units.select { |r| r[:unit_id] == unit && r[:room_id] != room[:id] }&.each do |unit|
+        booking.dtstart.upto(booking.dtend) do |series|
+          next if series == booking.dtend
+
+          set_lookup_table(@lookup_dates_rooms, series, unit[:room_id], :SHARED_BLOCKED)
+        end
       end
     end
   end
 
-  def set_decision_table(date, unit)
-    @decision_table[date] = {} unless @decision_table[date]
-    @decision_table[date][unit] = true
-  end
-
-  def create_connected_bookings
-    room_unit.consist_of_rooms.each do |connected_room|
-      Booking.create(dtstart: dtstart,
-                     dtend: dtend,
-                     house: house,
-                     room: connected_room.room,
-                     room_unit: connected_room,
-                     user: user,
-                     status: self.status == 'confirmed' ? :blocked : self.status,
-                     parent_booking_id: id)
-    end
-  end
-
-  def update_check_availability
-    raise('Dates not available') unless dates_available?
-  end
-
-  def update_connected_bookings
-    children.each do |booking|
-      booking.update(dtstart: dtstart,
-                     dtend: dtend,
-                     user: user,
-                     status: self.status == 'confirmed' ? :blocked : self.status)
-    end
-  end
-
-  def destroy_connected_bookings
-    children.destroy_all
+  def set_lookup_table(table, date, key, value)
+    table[date] = {} unless table[date]
+    table[date][key] = value
   end
 end
