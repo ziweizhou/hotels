@@ -95,18 +95,24 @@ RSpec.describe Room, type: :model do
     end
 
     context "payload attribute" do
+      let(:expected_payload_param_list) { [] }
+
       it "should return payload with correct length" do
         correct_length = dates_enumeration.count
         expect(result[:payload].length).to eq(correct_length)
+      end
+
+      shared_context "assert payload" do
+        it "should return payload with correct allotment" do
+          assert_payload(*expected_payload_param_list)
+        end
       end
 
       context "without room units assignment" do
         context "with no bookings" do
           let(:bookings) { [] }
 
-          it "should return payload with correct allotment" do
-            assert_payload
-          end
+          include_context "assert payload"
         end
 
         context "with an unrelated booking" do
@@ -116,9 +122,7 @@ RSpec.describe Room, type: :model do
             ]
           }
 
-          it "should return payload with correct allotment" do
-            assert_payload
-          end
+          include_context "assert payload"
         end
 
         context "with a single booking 1" do
@@ -127,12 +131,11 @@ RSpec.describe Room, type: :model do
               create_booking(room, "2019-10-11", "2019-10-14")
             ]
           }
+          let(:expected_payload_param_list) {
+            [["2019-10-11", "2019-10-13", 1]]
+          }
 
-          it "should return payload with correct allotment" do
-            assert_payload(
-              ["2019-10-11", "2019-10-13", 1]
-            )
-          end
+          include_context "assert payload"
         end
 
         context "with a single booking 2" do
@@ -141,12 +144,11 @@ RSpec.describe Room, type: :model do
               create_booking(room, "2019-10-10", "2019-10-22")
             ]
           }
+          let(:expected_payload_param_list) {
+            [["2019-10-11", "2019-10-20", 1]]
+          }
 
-          it "should return payload with correct allotment" do
-            assert_payload(
-              ["2019-10-11", "2019-10-20", 1]
-            )
-          end
+          include_context "assert payload"
         end
 
         context "with a single booking 3" do
@@ -155,12 +157,11 @@ RSpec.describe Room, type: :model do
               create_booking(room, "2019-10-10", "2019-10-20")
             ]
           }
+          let(:expected_payload_param_list) {
+            [["2019-10-11", "2019-10-19", 1]]
+          }
 
-          it "should return payload with correct allotment" do
-            assert_payload(
-              ["2019-10-11", "2019-10-19", 1]
-            )
-          end
+          include_context "assert payload"
         end
 
         context "with a single booking 4" do
@@ -169,12 +170,11 @@ RSpec.describe Room, type: :model do
               create_booking(room, "2019-10-14", "2019-10-25")
             ]
           }
+          let(:expected_payload_param_list) {
+            [["2019-10-14", "2019-10-20", 1]]
+          }
 
-          it "should return payload with correct allotment" do
-            assert_payload(
-              ["2019-10-14", "2019-10-20", 1]
-            )
-          end
+          include_context "assert payload"
         end
 
         context "with multiple bookings 1" do
@@ -184,13 +184,14 @@ RSpec.describe Room, type: :model do
               create_booking(room, "2019-10-08", "2019-10-12")
             ]
           }
-
-          it "should return payload with correct allotment" do
-            assert_payload(
+          let(:expected_payload_param_list) {
+            [
               ["2019-10-14", "2019-10-20", 1],
               ["2019-10-10", "2019-10-11", 1]
-            )
-          end
+            ]
+          }
+
+          include_context "assert payload"
         end
 
         context "with multiple bookings 2" do
@@ -200,14 +201,15 @@ RSpec.describe Room, type: :model do
               create_booking(room, "2019-10-08", "2019-10-16")
             ]
           }
-
-          it "should return payload with correct allotment" do
-            assert_payload(
+          let(:expected_payload_param_list) {
+            [
               ["2019-10-10", "2019-10-13", 1],
               ["2019-10-14", "2019-10-15", 2],
               ["2019-10-16", "2019-10-20", 1]
-            )
-          end
+            ]
+          }
+
+          include_context "assert payload"
         end
 
         context "with multiple bookings 3" do
@@ -217,14 +219,15 @@ RSpec.describe Room, type: :model do
               create_booking(room, "2019-10-12", "2019-10-14")
             ]
           }
-
-          it "should return payload with correct allotment" do
-            assert_payload(
+          let(:expected_payload_param_list) {
+            [
               ["2019-10-10", "2019-10-11", 1],
               ["2019-10-12", "2019-10-13", 2],
               ["2019-10-14", "2019-10-20", 1]
-            )
-          end
+            ]
+          }
+
+          include_context "assert payload"
         end
 
         context "with oversold bookings" do
@@ -236,15 +239,16 @@ RSpec.describe Room, type: :model do
               create_booking(room, "2019-10-13", "2019-10-18"),
             ]
           }
-
-          it "should return payload with correct allotment" do
-            assert_payload(
+          let(:expected_payload_param_list) {
+            [
               ["2019-10-11", "2019-10-11", 1],
               ["2019-10-12", "2019-10-12", 2],
               ["2019-10-13", "2019-10-13", 4],
               ["2019-10-14", "2019-10-17", 1]
-            )
-          end
+            ]
+          }
+
+          include_context "assert payload"
         end
       end
 
@@ -255,94 +259,259 @@ RSpec.describe Room, type: :model do
             create_booking(room, "2019-10-15", "2019-10-20", room_units.first)
           ]
         }
-
-        it "should return payload with correct allotment" do
-          assert_payload(
+        let(:expected_payload_param_list) {
+          [
             ["2019-10-11", "2019-10-13", 1],
             ["2019-10-15", "2019-10-19", 1]
-          )
-        end
+          ]
+        }
+
+        include_context "assert payload"
       end
 
       context "with connected room" do
-        let(:start_date) { "2019-10-11" }
-        let(:end_date) { "2019-10-12" }
-        let(:family_room) {
-          house.rooms.create!(
-            is_master: true,
-            name: "Family Room Style"
-          )
-        }
-        let(:connected_unit) {
-          num_of_room_units.times.map do
-            family_room.room_units.create!(room_no: Faker::Number.number(4), house: family_room.house)
-          end.first
-        }
-        let(:unit1) {
-          unit = RoomUnit.first
-          unit.part_of_room = connected_unit
-          unit.save
-          unit
-        }
-        let(:unit2) {
-          unit = RoomUnit.second
-          unit.part_of_room = connected_unit
-          unit.save
-          unit
-        }
-
-        before(:each) do
-          family_room
-          connected_unit
-          unit1
-          unit2
-        end
-
-        context "setup" do
-          it "should have correct number of room units for the connected unit" do
-            expect(connected_unit.room.room_units.size).to eq(num_of_room_units)
-          end
-        end
-
-        context "family room's availability after a sub room unit is booked" do
-          let(:bookings) {
-            [
-              create_booking(room, "2019-10-11", "2019-10-12", unit1)
-            ]
-          }
-          let(:room) { family_room }
-
-          it "should return payload with correct allotment" do
-            assert_payload(
-              ["2019-10-11", "2019-10-11", 1]
+        context "sample cases" do
+          let(:start_date) { "2019-10-11" }
+          let(:end_date) { "2019-10-12" }
+          let(:family_room) {
+            house.rooms.create!(
+              is_master: true,
+              name: "Family Room Style"
             )
-          end
-        end
-
-        context "sub room units' room availability after the connected unit is booked" do
-          let(:bookings) {
-            [
-              create_booking(room, "2019-10-11", "2019-10-12", connected_unit)
-            ]
+          }
+          let(:connected_unit) {
+            num_of_room_units.times.map do
+              family_room.room_units.create!(room_no: Faker::Number.number(4), house: family_room.house)
+            end.first
+          }
+          let(:unit1) {
+            unit = RoomUnit.first
+            unit.part_of_room = connected_unit
+            unit.save
+            unit
+          }
+          let(:unit2) {
+            unit = RoomUnit.second
+            unit.part_of_room = connected_unit
+            unit.save
+            unit
           }
 
-          context "unit1" do
-            let(:room) { unit1.room }
+          before(:each) do
+            family_room
+            connected_unit
+            unit1
+            unit2
+          end
 
-            it "should return payload with correct allotment" do
-              assert_payload(
-                ["2019-10-11", "2019-10-11", 1]
-              )
+          context "setup" do
+            it "should have correct number of room units for the connected unit" do
+              expect(connected_unit.room.room_units.size).to eq(num_of_room_units)
             end
           end
 
-          context "unit2" do
-            let(:room) { unit2.room }
-
-            it "should return payload with correct allotment" do
-              assert_payload(
+          context "family room's availability after a sub room unit is booked" do
+            let(:bookings) {
+              [
+                create_booking(room, "2019-10-11", "2019-10-12", unit1)
+              ]
+            }
+            let(:room) { family_room }
+            let(:expected_payload_param_list) {
+              [
                 ["2019-10-11", "2019-10-11", 1]
-              )
+              ]
+            }
+
+            include_context "assert payload"
+          end
+
+          context "sub room units' room availability after the connected unit is booked" do
+            let(:bookings) {
+              [
+                create_booking(room, "2019-10-11", "2019-10-12", connected_unit)
+              ]
+            }
+
+            context "unit1" do
+              let(:room) { unit1.room }
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-11", 1]
+                ]
+              }
+
+              include_context "assert payload"
+            end
+
+            context "unit2" do
+              let(:room) { unit2.room }
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-11", 1]
+                ]
+              }
+
+              include_context "assert payload"
+            end
+          end
+        end
+
+        context "more complex cases" do
+          let(:start_date) { "2019-10-11" }
+          let(:end_date) { "2019-10-15" }
+
+          # family room -> 2 units
+          #   -> room 1 consists of deluxe 101 and 102
+          #   -> room 2 consists of deluxe 103 and 104
+          # deluxe -> 4 units
+          # 1 booking with 3 days of family room 1
+          # availability for both of them
+          let(:family_room) {
+            house.rooms.create!(
+              is_master: true,
+              name: "Family Room Style"
+            )
+          }
+          let(:deluxe_room) {
+            house.rooms.create!(
+              is_master: true,
+              name: "Deluxe Room Style"
+            )
+          }
+          let(:num_of_family_units) { 2 }
+          let(:family_units) {
+            num_of_family_units.times.map do
+              family_room.room_units.create!(room_no: Faker::Number.number(4), house: family_room.house)
+            end
+          }
+          let(:num_of_deluxe_units) { 4 }
+          let(:deluxe_units) {
+            num_of_deluxe_units.times.map do |i|
+              unit = deluxe_room.room_units.create!(room_no: Faker::Number.number(4), house: deluxe_room.house)
+              unit.part_of_room = family_units[i % num_of_family_units]
+              unit.save
+              unit
+            end
+          }
+
+          before(:each) do
+            family_room
+            family_units
+            deluxe_room
+            deluxe_units
+          end
+
+          shared_context "with one booking" do
+            let(:bookings) {
+              [
+                create_booking(family_room, "2019-10-11", "2019-10-14", family_units.first)
+              ]
+            }
+          end
+
+          shared_context "with two bookings" do
+            let(:bookings) {
+              [
+                create_booking(family_room, "2019-10-11", "2019-10-14", family_units.first),
+                create_booking(family_room, "2019-10-11", "2019-10-14", family_units.second)
+              ]
+            }
+          end
+
+          shared_context "with one more deluxe unit" do
+            let(:num_of_deluxe_units) { 5 }
+            let(:deluxe_units) {
+              deluxe_room.room_units.create!(room_no: Faker::Number.number(4), house: deluxe_room.house)
+
+              (num_of_deluxe_units - 1).times.map do |i|
+                unit = deluxe_room.room_units.create!(room_no: Faker::Number.number(4), house: deluxe_room.house)
+                unit.part_of_room = family_units[i % num_of_family_units]
+                unit.save
+                unit
+              end
+            }
+          end
+
+          context "for the family room" do
+            let(:room) { family_room }
+            let(:num_of_room_units) { num_of_family_units }
+
+            context "with one booking" do
+              include_context "with one booking"
+
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-13", 1]
+                ]
+              }
+
+              include_context "assert payload"
+            end
+
+            context "with two bookings" do
+              include_context "with two bookings"
+
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-13", 2]
+                ]
+              }
+
+              include_context "assert payload"
+
+              context "with one more deluxe unit" do
+                include_context "with one more deluxe unit"
+
+                let(:expected_payload_param_list) {
+                  [
+                    ["2019-10-11", "2019-10-13", 2]
+                  ]
+                }
+
+                include_context "assert payload"
+              end
+            end
+          end
+
+          context "for deluxe room" do
+            let(:room) { deluxe_room }
+            let(:num_of_room_units) { num_of_deluxe_units }
+
+            context "with one booking" do
+              include_context "with one booking"
+
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-13", 1]
+                ]
+              }
+
+              include_context "assert payload"
+            end
+
+            context "with two bookings" do
+              include_context "with two bookings"
+
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-13", 2]
+                ]
+              }
+
+              include_context "assert payload"
+
+              context "with one more deluxe unit" do
+                include_context "with one more deluxe unit"
+
+                let(:expected_payload_param_list) {
+                  [
+                    ["2019-10-11", "2019-10-13", 2]
+                  ]
+                }
+
+                include_context "assert payload"
+              end
             end
           end
         end
