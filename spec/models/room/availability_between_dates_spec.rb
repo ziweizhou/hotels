@@ -130,7 +130,7 @@ RSpec.describe Room, type: :model do
 
           it "should return payload with correct allotment" do
             assert_payload(
-              ["2019-10-11", "2019-10-13", num_of_room_units - 1]
+              ["2019-10-11", "2019-10-13", 1]
             )
           end
         end
@@ -144,7 +144,7 @@ RSpec.describe Room, type: :model do
 
           it "should return payload with correct allotment" do
             assert_payload(
-              ["2019-10-11", "2019-10-20", num_of_room_units - 1]
+              ["2019-10-11", "2019-10-20", 1]
             )
           end
         end
@@ -158,7 +158,7 @@ RSpec.describe Room, type: :model do
 
           it "should return payload with correct allotment" do
             assert_payload(
-              ["2019-10-11", "2019-10-19", num_of_room_units - 1]
+              ["2019-10-11", "2019-10-19", 1]
             )
           end
         end
@@ -172,7 +172,7 @@ RSpec.describe Room, type: :model do
 
           it "should return payload with correct allotment" do
             assert_payload(
-              ["2019-10-14", "2019-10-20", num_of_room_units - 1]
+              ["2019-10-14", "2019-10-20", 1]
             )
           end
         end
@@ -187,8 +187,8 @@ RSpec.describe Room, type: :model do
 
           it "should return payload with correct allotment" do
             assert_payload(
-              ["2019-10-14", "2019-10-20", num_of_room_units - 1],
-              ["2019-10-10", "2019-10-11", num_of_room_units - 1]
+              ["2019-10-14", "2019-10-20", 1],
+              ["2019-10-10", "2019-10-11", 1]
             )
           end
         end
@@ -203,9 +203,9 @@ RSpec.describe Room, type: :model do
 
           it "should return payload with correct allotment" do
             assert_payload(
-              ["2019-10-10", "2019-10-13", num_of_room_units - 1],
-              ["2019-10-14", "2019-10-15", num_of_room_units - 2],
-              ["2019-10-16", "2019-10-20", num_of_room_units - 1]
+              ["2019-10-10", "2019-10-13", 1],
+              ["2019-10-14", "2019-10-15", 2],
+              ["2019-10-16", "2019-10-20", 1]
             )
           end
         end
@@ -220,9 +220,9 @@ RSpec.describe Room, type: :model do
 
           it "should return payload with correct allotment" do
             assert_payload(
-              ["2019-10-10", "2019-10-11", num_of_room_units - 1],
-              ["2019-10-12", "2019-10-13", num_of_room_units - 2],
-              ["2019-10-14", "2019-10-20", num_of_room_units - 1]
+              ["2019-10-10", "2019-10-11", 1],
+              ["2019-10-12", "2019-10-13", 2],
+              ["2019-10-14", "2019-10-20", 1]
             )
           end
         end
@@ -239,10 +239,10 @@ RSpec.describe Room, type: :model do
 
           it "should return payload with correct allotment" do
             assert_payload(
-              ["2019-10-11", "2019-10-11", num_of_room_units - 1],
-              ["2019-10-12", "2019-10-12", num_of_room_units - 2],
-              ["2019-10-13", "2019-10-13", num_of_room_units - 4],
-              ["2019-10-14", "2019-10-17", num_of_room_units - 1]
+              ["2019-10-11", "2019-10-11", 1],
+              ["2019-10-12", "2019-10-12", 2],
+              ["2019-10-13", "2019-10-13", 4],
+              ["2019-10-14", "2019-10-17", 1]
             )
           end
         end
@@ -258,8 +258,8 @@ RSpec.describe Room, type: :model do
 
         it "should return payload with correct allotment" do
           assert_payload(
-            ["2019-10-11", "2019-10-13", num_of_room_units - 1],
-            ["2019-10-15", "2019-10-19", num_of_room_units - 1]
+            ["2019-10-11", "2019-10-13", 1],
+            ["2019-10-15", "2019-10-19", 1]
           )
         end
       end
@@ -271,7 +271,11 @@ RSpec.describe Room, type: :model do
 
     dates_enumeration.each_with_index do |date, i|
       expect(result[:payload][i][:date]).to eq(date)
-      expect(result[:payload][i][:allotment]).to eq(expected_dates.has_key?(date) ? expected_dates[date] : num_of_room_units)
+      expect(result[:payload][i][:allotment]).to eq(
+        expected_dates.has_key?(date) ?
+          [num_of_room_units - expected_dates[date], 0].max :
+          num_of_room_units
+      )
     end
   end
 
@@ -281,10 +285,10 @@ RSpec.describe Room, type: :model do
 
   def get_expected_dates(params_list)
     params_list.reduce({}) do |acc, params|
-      start_date, end_date, allotment = params
+      start_date, end_date, rooms_occupied = params
 
       get_dates_enumeration(start_date, end_date).each do |date|
-        acc[date] = [allotment, 0].max
+        acc[date] = rooms_occupied
       end
 
       acc
