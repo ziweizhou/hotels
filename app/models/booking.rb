@@ -22,6 +22,12 @@ class Booking < ApplicationRecord
   }
 
   scope :confirmed, -> { where(status: :confirmed) }
-  scope :assigned, -> { where(room_unit_id: nil) }
-  scope :unassigned, -> { where.not(room_unit_id: nil) }
+  scope :assigned, -> { where.not(room_unit_id: nil) }
+  scope :unassigned, -> { where(room_unit_id: nil) }
+
+  def get_dates_enumeration(start_date, end_date)
+    booking_start = [start_date, dtstart].max
+    booking_end = [end_date, dtend - 1.day].min
+    booking_start.upto(booking_end)
+  end
 end

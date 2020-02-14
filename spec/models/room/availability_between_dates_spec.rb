@@ -273,6 +273,7 @@ RSpec.describe Room, type: :model do
         context "sample cases" do
           let(:start_date) { "2019-10-11" }
           let(:end_date) { "2019-10-12" }
+          let(:num_of_room_units) { 1 }
           let(:family_room) {
             house.rooms.create!(
               is_master: true,
@@ -402,7 +403,7 @@ RSpec.describe Room, type: :model do
             deluxe_units
           end
 
-          shared_context "with one booking" do
+          shared_context "with one family room booking" do
             let(:bookings) {
               [
                 create_booking(family_room, "2019-10-11", "2019-10-14", family_units.first)
@@ -410,11 +411,20 @@ RSpec.describe Room, type: :model do
             }
           end
 
-          shared_context "with two bookings" do
+          shared_context "with two family room bookings" do
             let(:bookings) {
               [
                 create_booking(family_room, "2019-10-11", "2019-10-14", family_units.first),
                 create_booking(family_room, "2019-10-11", "2019-10-14", family_units.second)
+              ]
+            }
+          end
+
+          shared_context "with two deluxe room bookings" do
+            let(:bookings) {
+              [
+                create_booking(deluxe_room, "2019-10-11", "2019-10-14"),
+                create_booking(deluxe_room, "2019-10-11", "2019-10-14")
               ]
             }
           end
@@ -437,8 +447,8 @@ RSpec.describe Room, type: :model do
             let(:room) { family_room }
             let(:num_of_room_units) { num_of_family_units }
 
-            context "with one booking" do
-              include_context "with one booking"
+            context "with one family room booking" do
+              include_context "with one family room booking"
 
               let(:expected_payload_param_list) {
                 [
@@ -449,8 +459,8 @@ RSpec.describe Room, type: :model do
               include_context "assert payload"
             end
 
-            context "with two bookings" do
-              include_context "with two bookings"
+            context "with two family room bookings" do
+              include_context "with two family room bookings"
 
               let(:expected_payload_param_list) {
                 [
@@ -471,6 +481,18 @@ RSpec.describe Room, type: :model do
 
                 include_context "assert payload"
               end
+            end
+
+            context "with two deluxe room bookings" do
+              include_context "with two deluxe room bookings"
+
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-13", 1]
+                ]
+              }
+
+              include_context "assert payload"
             end
           end
 
@@ -478,24 +500,24 @@ RSpec.describe Room, type: :model do
             let(:room) { deluxe_room }
             let(:num_of_room_units) { num_of_deluxe_units }
 
-            context "with one booking" do
-              include_context "with one booking"
+            context "with one family room booking" do
+              include_context "with one family room booking"
 
               let(:expected_payload_param_list) {
                 [
-                  ["2019-10-11", "2019-10-13", 1]
+                  ["2019-10-11", "2019-10-13", 2]
                 ]
               }
 
               include_context "assert payload"
             end
 
-            context "with two bookings" do
-              include_context "with two bookings"
+            context "with two family room bookings" do
+              include_context "with two family room bookings"
 
               let(:expected_payload_param_list) {
                 [
-                  ["2019-10-11", "2019-10-13", 2]
+                  ["2019-10-11", "2019-10-13", 4]
                 ]
               }
 
@@ -506,12 +528,24 @@ RSpec.describe Room, type: :model do
 
                 let(:expected_payload_param_list) {
                   [
-                    ["2019-10-11", "2019-10-13", 2]
+                    ["2019-10-11", "2019-10-13", 4]
                   ]
                 }
 
                 include_context "assert payload"
               end
+            end
+
+            context "with two deluxe room bookings" do
+              include_context "with two deluxe room bookings"
+
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-13", 2]
+                ]
+              }
+
+              include_context "assert payload"
             end
           end
         end
