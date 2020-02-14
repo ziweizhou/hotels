@@ -59,7 +59,7 @@ ActiveRecord::Schema.define(version: 2020_02_14_024501) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "room_no"
-    t.integer "part_of_room_id"
+    t.bigint "part_of_room_id"
     t.index ["house_id"], name: "index_room_units_on_house_id"
     t.index ["room_id", "unit_id"], name: "index_room_units_on_room_id_and_unit_id", unique: true
     t.index ["room_id"], name: "index_room_units_on_room_id"

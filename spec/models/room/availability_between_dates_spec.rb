@@ -263,6 +263,90 @@ RSpec.describe Room, type: :model do
           )
         end
       end
+
+      context "with connected room" do
+        let(:start_date) { "2019-10-11" }
+        let(:end_date) { "2019-10-12" }
+        let(:family_room) {
+          house.rooms.create!(
+            is_master: true,
+            name: "Family Room Style"
+          )
+        }
+        let(:connected_unit) {
+          num_of_room_units.times.map do
+            family_room.room_units.create!(room_no: Faker::Number.number(4), house: family_room.house)
+          end.first
+        }
+        let(:unit1) {
+          unit = RoomUnit.first
+          unit.part_of_room = connected_unit
+          unit.save
+          unit
+        }
+        let(:unit2) {
+          unit = RoomUnit.second
+          unit.part_of_room = connected_unit
+          unit.save
+          unit
+        }
+
+        before(:each) do
+          family_room
+          connected_unit
+          unit1
+          unit2
+        end
+
+        context "setup" do
+          it "should have correct number of room units for the connected unit" do
+            expect(connected_unit.room.room_units.size).to eq(num_of_room_units)
+          end
+        end
+
+        context "family room's availability after a sub room unit is booked" do
+          let(:bookings) {
+            [
+              create_booking(room, "2019-10-11", "2019-10-12", unit1)
+            ]
+          }
+          let(:room) { family_room }
+
+          it "should return payload with correct allotment" do
+            assert_payload(
+              ["2019-10-11", "2019-10-11", 1]
+            )
+          end
+        end
+
+        context "sub room units' room availability after the connected unit is booked" do
+          let(:bookings) {
+            [
+              create_booking(room, "2019-10-11", "2019-10-12", connected_unit)
+            ]
+          }
+
+          context "unit1" do
+            let(:room) { unit1.room }
+
+            it "should return payload with correct allotment" do
+              assert_payload(
+                ["2019-10-11", "2019-10-11", 1]
+              )
+            end
+          end
+
+          context "unit2" do
+            let(:room) { unit2.room }
+
+            it "should return payload with correct allotment" do
+              assert_payload(
+                ["2019-10-11", "2019-10-11", 1]
+              )
+            end
+          end
+        end
+      end
     end
   end
 
@@ -303,7 +387,7 @@ RSpec.describe Room, type: :model do
     )
     Booking.create(
       house: room.house,
-      room: room,
+      room: room_unit.nil? ? room : room_unit.room,
       room_unit: room_unit,
       summary: Faker::GameOfThrones.character,
       description: Faker::Lorem.paragraph,
