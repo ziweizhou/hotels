@@ -415,7 +415,7 @@ RSpec.describe Room, type: :model do
             let(:bookings) {
               [
                 create_booking(family_room, "2019-10-11", "2019-10-14", family_units.first),
-                create_booking(family_room, "2019-10-11", "2019-10-14", family_units.second)
+                create_booking(family_room, "2019-10-11", "2019-10-14")
               ]
             }
           end
@@ -423,7 +423,7 @@ RSpec.describe Room, type: :model do
           shared_context "with two deluxe room bookings" do
             let(:bookings) {
               [
-                create_booking(deluxe_room, "2019-10-11", "2019-10-14"),
+                create_booking(deluxe_room, "2019-10-11", "2019-10-14", deluxe_units.second),
                 create_booking(deluxe_room, "2019-10-11", "2019-10-14")
               ]
             }
