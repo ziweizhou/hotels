@@ -43,25 +43,20 @@ class Room < ApplicationRecord
 
     payload = dates_enumeration.map do |date|
       {
-        date: date.strftime("%Y-%m-%d"),
+        date: to_date_str(date),
         allotment: date_map[:vacancy][date].size
       }
     end
 
     {
       total_rooms: total_room_units,
-      start_date: start_date_str,
-      end_date: end_date_str,
+      start_date: to_date_str(start_date),
+      end_date: to_date_str(end_date),
       payload: payload
     }
   end
 
   private
-
-  def bookings_in_range(bookings, start_date, end_date)
-    bookings_in_scope = bookings.confirmed
-    bookings_in_scope.in_between(start_date, end_date)
-  end
 
   def initialize_date_map(dates_enumeration)
     dates_enumeration.reduce({ vacancy: {}, to_delete: {} }) do |dm, date|
@@ -223,5 +218,9 @@ class Room < ApplicationRecord
         end
       end
     end
+  end
+
+  def to_date_str(date)
+    date.strftime("%Y-%m-%d")
   end
 end
