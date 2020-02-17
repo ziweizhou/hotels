@@ -25,15 +25,14 @@ class Room < ApplicationRecord
       bookings.confirmed.in_between(start_date, end_date)
     end
 
-    {
-      assigned_room_bookings: room_bookings.assigned,
-      assigned_subroom_bookings: subroom_bookings.assigned,
-      assigned_superroom_bookings: superroom_bookings.assigned,
-      unassigned_room_bookings: room_bookings.unassigned,
-      unassigned_subroom_bookings: subroom_bookings.unassigned,
-      unassigned_superroom_bookings: superroom_bookings.unassigned
-    }.each do |(bookings_type, bookings)|
-      update_date_map(date_map, bookings, bookings_type, start_date, end_date)
+    [:assigned, :unassigned].each do |scope|
+      {
+        room_bookings: room_bookings,
+        subroom_bookings: subroom_bookings,
+        superroom_bookings: superroom_bookings
+      }.each do |(bookings_type, bookings)|
+        update_date_map(date_map, bookings, bookings_type, scope, start_date, end_date)
+      end
     end
 
     date_map[:to_delete].keys.each do |date|
@@ -83,10 +82,10 @@ class Room < ApplicationRecord
     end
   end
 
-  def update_date_map(date_map, bookings, bookings_type, start_date, end_date)
-    args = [date_map, bookings, start_date, end_date]
+  def update_date_map(date_map, bookings, bookings_type, scope, start_date, end_date)
+    args = [date_map, bookings.send(scope), start_date, end_date]
 
-    case bookings_type
+    case :"#{scope}_#{bookings_type}"
     when :assigned_room_bookings
       update_date_map_from_assigned_room_bookings(*args)
     when :unassigned_room_bookings
@@ -151,8 +150,8 @@ class Room < ApplicationRecord
         date_vacancy = date_map[:vacancy][date]
 
         assigned_unit = date_vacancy.keys.reduce(nil) do |min_vacancy_unit, superroom_unit_id|
-          min_vacancy_unit.nil? ||
-          date_vacancy[superroom_unit_id].size < date_vacancy[min_vacancy_unit].size ?
+          (min_vacancy_unit.nil? ||
+          date_vacancy[superroom_unit_id].size < date_vacancy[min_vacancy_unit].size) ?
             superroom_unit_id :
             min_vacancy_unit
         end
@@ -204,8 +203,8 @@ class Room < ApplicationRecord
         date_vacancy = date_map[:vacancy][date]
 
         superroom_assignment = subroom_units_map.keys.reduce({}) do |acc, superroom_unit_id|
-          vacant_subrooms = subroom_units_map[superroom_unit_id].keys.reduce(0) do |count, subroom_unit_id|
-            count += (date_vacancy.has_key?(subroom_unit_id) ? 1 : 0)
+          vacant_subrooms = subroom_units_map[superroom_unit_id].keys.count do |subroom_unit_id|
+            date_vacancy.has_key?(subroom_unit_id)
           end
 
           if !acc.has_key?(:max_vacant_subrooms) || vacant_subrooms > acc[:max_vacant_subrooms]
