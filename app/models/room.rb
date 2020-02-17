@@ -11,10 +11,9 @@ class Room < ApplicationRecord
   has_many :bookings
 
   def availability_between_dates(start_date_str, end_date_str)
-    start_date = start_date_str.is_a?(Date) ? start_date_str : Date.parse(start_date_str)
-    end_date = end_date_str.is_a?(Date) ? end_date_str : Date.parse(end_date_str)
+    start_date = parse_date(start_date_str)
+    end_date = parse_date(end_date_str)
     dates_enumeration = start_date.upto(end_date)
-    total_room_units = room_units.count
     date_map = initialize_date_map(dates_enumeration)
 
     room_bookings, subroom_bookings, superroom_bookings = [
@@ -41,18 +40,16 @@ class Room < ApplicationRecord
       end
     end
 
-    payload = dates_enumeration.map do |date|
-      {
-        date: to_date_str(date),
-        allotment: date_map[:vacancy][date].size
-      }
-    end
-
     {
-      total_rooms: total_room_units,
+      total_rooms: room_units.count,
       start_date: to_date_str(start_date),
       end_date: to_date_str(end_date),
-      payload: payload
+      payload: dates_enumeration.map do |date|
+        {
+          date: to_date_str(date),
+          allotment: date_map[:vacancy][date].size
+        }
+      end
     }
   end
 
@@ -218,6 +215,10 @@ class Room < ApplicationRecord
         end
       end
     end
+  end
+
+  def parse_date(date_str)
+    date_str.is_a?(Date) ? date_str : Date.parse(date_str)
   end
 
   def to_date_str(date)
