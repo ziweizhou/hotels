@@ -57,18 +57,16 @@ class Room < ApplicationRecord
 
   def initialize_date_map(dates_enumeration)
     dates_enumeration.reduce({ vacancy: {}, to_delete: {} }) do |dm, date|
-      if consist_of_rooms.size > 0
-        dm[:vacancy][date] = consist_of_rooms.reduce({}) do |date_vacancy, room_unit|
+      dm[:vacancy][date] = consist_of_rooms.size > 0 ?
+        consist_of_rooms.reduce({}) do |date_vacancy, room_unit|
           date_vacancy[room_unit.part_of_room_id] ||= {}
           date_vacancy[room_unit.part_of_room_id][room_unit.id] = true
           date_vacancy
-        end
-      else
-        dm[:vacancy][date] = room_units.reduce({}) do |date_vacancy, room_unit|
+        end :
+        room_units.reduce({}) do |date_vacancy, room_unit|
           date_vacancy[room_unit.id] = {}
           date_vacancy
         end
-      end
 
       dm
     end
@@ -103,10 +101,8 @@ class Room < ApplicationRecord
     each_booking_date(bookings, start_date, end_date) do |booking, date|
       date_vacancy = date_map[:vacancy][date]
 
-      assigned_unit = date_vacancy.keys.reduce(nil) do |max_vacancy_unit, room_unit_id|
-        max_vacancy_unit = room_unit_id if max_vacancy_unit.nil? ||
-          date_vacancy[room_unit_id].size > date_vacancy[max_vacancy_unit].size
-        max_vacancy_unit
+      assigned_unit = date_vacancy.keys.max do |a_unit_id, b_unit_id|
+        date_vacancy[a_unit_id].size <=> date_vacancy[b_unit_id].size
       end
 
       date_vacancy.delete(assigned_unit) unless assigned_unit.nil?
@@ -134,11 +130,8 @@ class Room < ApplicationRecord
     each_booking_date(bookings, start_date, end_date) do |booking, date|
       date_vacancy = date_map[:vacancy][date]
 
-      assigned_unit = date_vacancy.keys.reduce(nil) do |min_vacancy_unit, superroom_unit_id|
-        (min_vacancy_unit.nil? ||
-        date_vacancy[superroom_unit_id].size < date_vacancy[min_vacancy_unit].size) ?
-          superroom_unit_id :
-          min_vacancy_unit
+      assigned_unit = date_vacancy.keys.min do |a_unit_id, b_unit_id|
+        date_vacancy[a_unit_id].size <=> date_vacancy[b_unit_id].size
       end
 
       next if assigned_unit.nil?
@@ -172,25 +165,25 @@ class Room < ApplicationRecord
 
     each_booking_date(bookings, start_date, end_date) do |booking, date|
       date_vacancy = date_map[:vacancy][date]
+      assigned_unit = nil
 
-      superroom_assignment = subroom_units_map.keys.reduce({}) do |acc, superroom_unit_id|
+      subroom_units_map.keys.reduce(nil) do |max_vacant_subrooms, superroom_unit_id|
         vacant_subrooms = subroom_units_map[superroom_unit_id].keys.count do |subroom_unit_id|
           date_vacancy.has_key?(subroom_unit_id)
         end
 
-        if !acc.has_key?(:max_vacant_subrooms) || vacant_subrooms > acc[:max_vacant_subrooms]
-          acc[:max_vacant_subrooms] = vacant_subrooms
-          acc[:assigned_superroom_unit_id] = superroom_unit_id
+        if max_vacant_subrooms.nil? || vacant_subrooms > max_vacant_subrooms
+          max_vacant_subrooms = vacant_subrooms
+          assigned_unit = superroom_unit_id
         end
 
-        acc
+        max_vacant_subrooms
       end
 
-      if superroom_assignment.has_key?(:assigned_superroom_unit_id)
-        assigned_unit = superroom_assignment[:assigned_superroom_unit_id]
-        subroom_units_map[assigned_unit].keys.each do |subroom_unit_id|
-          date_vacancy.delete(subroom_unit_id)
-        end
+      next if assigned_unit.nil?
+
+      subroom_units_map[assigned_unit].keys.each do |subroom_unit_id|
+        date_vacancy.delete(subroom_unit_id)
       end
     end
   end
