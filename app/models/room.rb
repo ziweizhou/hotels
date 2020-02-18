@@ -15,21 +15,14 @@ class Room < ApplicationRecord
     end_date = parse_date(end_date_str)
     dates_enumeration = start_date.upto(end_date)
     date_map = initialize_date_map(dates_enumeration)
-
-    room_bookings, subroom_bookings, superroom_bookings = [
-      bookings,
-      Booking.with_rooms(consist_of_rooms.select(:room_id)),
-      Booking.with_rooms(part_of_rooms.select(:room_id))
-    ].map do |bookings|
-      bookings.confirmed.in_between(start_date, end_date)
-    end
+    bookings_map = {
+      room_bookings: bookings,
+      subroom_bookings: Booking.with_rooms(consist_of_rooms.select(:room_id)),
+      superroom_bookings: Booking.with_rooms(part_of_rooms.select(:room_id))
+    }
 
     [:assigned, :unassigned].each do |scope|
-      {
-        room_bookings: room_bookings,
-        subroom_bookings: subroom_bookings,
-        superroom_bookings: superroom_bookings
-      }.each do |(bookings_type, bookings)|
+      bookings_map.each do |(bookings_type, bookings)|
         update_date_map(date_map, bookings, bookings_type, scope, start_date, end_date)
       end
     end
@@ -73,22 +66,9 @@ class Room < ApplicationRecord
   end
 
   def update_date_map(date_map, bookings, bookings_type, scope, start_date, end_date)
-    args = [date_map, bookings.send(scope), start_date, end_date]
-
-    case :"#{scope}_#{bookings_type}"
-    when :assigned_room_bookings
-      update_date_map_from_assigned_room_bookings(*args)
-    when :unassigned_room_bookings
-      update_date_map_from_unassigned_room_bookings(*args)
-    when :assigned_subroom_bookings
-      update_date_map_from_assigned_subroom_bookings(*args)
-    when :unassigned_subroom_bookings
-      update_date_map_from_unassigned_subroom_bookings(*args)
-    when :assigned_superroom_bookings
-      update_date_map_from_assigned_superroom_bookings(*args)
-    when :unassigned_superroom_bookings
-      update_date_map_from_unassigned_superroom_bookings(*args)
-    end
+    bookings_in_range = bookings.confirmed.in_between(start_date, end_date).send(scope)
+    args = [date_map, bookings_in_range, start_date, end_date]
+    send(:"update_date_map_from_#{scope}_#{bookings_type}", *args)
   end
 
   def update_date_map_from_assigned_room_bookings(date_map, bookings, start_date, end_date)
@@ -165,19 +145,14 @@ class Room < ApplicationRecord
 
     each_booking_date(bookings, start_date, end_date) do |booking, date|
       date_vacancy = date_map[:vacancy][date]
-      assigned_unit = nil
-
-      subroom_units_map.keys.reduce(nil) do |max_vacant_subrooms, superroom_unit_id|
-        vacant_subrooms = subroom_units_map[superroom_unit_id].keys.count do |subroom_unit_id|
+      get_vacant_subrooms = -> superroom_unit_id {
+        subroom_units_map[superroom_unit_id].keys.count do |subroom_unit_id|
           date_vacancy.has_key?(subroom_unit_id)
         end
+      }
 
-        if max_vacant_subrooms.nil? || vacant_subrooms > max_vacant_subrooms
-          max_vacant_subrooms = vacant_subrooms
-          assigned_unit = superroom_unit_id
-        end
-
-        max_vacant_subrooms
+      assigned_unit = subroom_units_map.keys.max do |a_unit_id, b_unit_id|
+        get_vacant_subrooms.call(a_unit_id) <=> get_vacant_subrooms.call(b_unit_id)
       end
 
       next if assigned_unit.nil?
