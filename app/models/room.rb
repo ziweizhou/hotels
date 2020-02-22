@@ -3,7 +3,7 @@ require 'date'
 class Room < ApplicationRecord
   include ActiveRecord::Sanitization
   belongs_to :house
-  # belongs_to :room_type
+  belongs_to :room_type, optional: true
   has_many :room_units
   has_many :units, through: :room_units
   has_many :consist_of_rooms, through: :room_units

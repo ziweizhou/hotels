@@ -4,7 +4,7 @@ class Booking < ApplicationRecord
   belongs_to :house
   belongs_to :room, optional: true
   belongs_to :room_unit, optional: true
-  # belongs_to :room_type
+  belongs_to :room_type, optional: true
   belongs_to :user
 
   belongs_to :parent, class_name: 'Booking', optional: true
