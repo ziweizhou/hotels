@@ -108,9 +108,11 @@ class Room < ApplicationRecord
     each_booking_date(bookings, start_date, end_date) do |booking, date|
       date_subroom_vacancy = date_map[:subroom_vacancy][date]
 
-      if date_subroom_vacancy.has_key?(booking.room_id)
-        assigned_unit = booking.room_unit_id
-        date_subroom_vacancy[booking.room_id].delete(assigned_unit)
+      if (
+        date_subroom_vacancy.has_key?(booking.room_id) &&
+        date_subroom_vacancy[booking.room_id].has_key?(booking.room_unit_id)
+      )
+        date_subroom_vacancy[booking.room_id].delete(booking.room_unit_id)
 
         if date_subroom_vacancy[booking.room_id].empty?
           date_subroom_vacancy.delete(booking.room_id)
