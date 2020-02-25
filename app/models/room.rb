@@ -47,10 +47,10 @@ class Room < ApplicationRecord
   private
 
   def initialize_date_map(dates_enumeration)
+    subroom_units = RoomUnit.with_rooms(consist_of_rooms.select(:room_id))
+
     dates_enumeration.reduce({ vacancy: {}, subroom_vacancy: {}, to_delete: {} }) do |dm, date|
       if consist_of_rooms.size > 0
-        subroom_units = RoomUnit.where(room_id: Room.where(id: consist_of_rooms.select(:room_id)).select(:id))
-
         dm[:subroom_vacancy][date] = subroom_units.reduce({}) do |date_subroom_vacancy, subroom_unit|
           date_subroom_vacancy[subroom_unit.room_id] ||= {}
           date_subroom_vacancy[subroom_unit.room_id][subroom_unit.id] = true
