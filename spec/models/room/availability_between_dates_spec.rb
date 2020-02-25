@@ -403,6 +403,14 @@ RSpec.describe Room, type: :model do
             deluxe_units
           end
 
+          shared_context "with one deluxe room booking" do
+            let(:bookings) {
+              [
+                create_booking(deluxe_room, "2019-10-11", "2019-10-14")
+              ]
+            }
+          end
+
           shared_context "with one family room booking" do
             let(:bookings) {
               [
@@ -483,6 +491,30 @@ RSpec.describe Room, type: :model do
               end
             end
 
+            context "with one deluxe room booking" do
+              include_context "with one deluxe room booking"
+
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-13", 1]
+                ]
+              }
+
+              include_context "assert payload"
+
+              context "with one more deluxe unit" do
+                include_context "with one more deluxe unit"
+
+                let(:expected_payload_param_list) {
+                  [
+                    ["2019-10-11", "2019-10-13", 0]
+                  ]
+                }
+
+                include_context "assert payload"
+              end
+            end
+
             context "with two deluxe room bookings" do
               include_context "with two deluxe room bookings"
 
@@ -529,6 +561,30 @@ RSpec.describe Room, type: :model do
                 let(:expected_payload_param_list) {
                   [
                     ["2019-10-11", "2019-10-13", 4]
+                  ]
+                }
+
+                include_context "assert payload"
+              end
+            end
+
+            context "with one deluxe room booking" do
+              include_context "with one deluxe room booking"
+
+              let(:expected_payload_param_list) {
+                [
+                  ["2019-10-11", "2019-10-13", 1]
+                ]
+              }
+
+              include_context "assert payload"
+
+              context "with one more deluxe unit" do
+                include_context "with one more deluxe unit"
+
+                let(:expected_payload_param_list) {
+                  [
+                    ["2019-10-11", "2019-10-13", 1]
                   ]
                 }
 

@@ -47,17 +47,34 @@ class Room < ApplicationRecord
   private
 
   def initialize_date_map(dates_enumeration)
-    dates_enumeration.reduce({ vacancy: {}, to_delete: {} }) do |dm, date|
-      dm[:vacancy][date] = consist_of_rooms.size > 0 ?
-        consist_of_rooms.reduce({}) do |date_vacancy, room_unit|
+    dates_enumeration.reduce({ vacancy: {}, subroom_vacancy: {}, to_delete: {} }) do |dm, date|
+      if consist_of_rooms.size > 0
+        subroom_units = RoomUnit.where(room_id: Room.where(id: consist_of_rooms.select(:room_id)).select(:id))
+
+        dm[:subroom_vacancy][date] = subroom_units.reduce({}) do |date_subroom_vacancy, subroom_unit|
+          date_subroom_vacancy[subroom_unit.room_id] ||= {}
+          date_subroom_vacancy[subroom_unit.room_id][subroom_unit.id] = true
+          date_subroom_vacancy
+        end
+
+        dm[:vacancy][date] = consist_of_rooms.reduce({}) do |date_vacancy, room_unit|
           date_vacancy[room_unit.part_of_room_id] ||= {}
           date_vacancy[room_unit.part_of_room_id][room_unit.id] = true
+
+          dm[:subroom_vacancy][date][room_unit.room_id].delete(room_unit.id)
+
+          if dm[:subroom_vacancy][date][room_unit.room_id].empty?
+            dm[:subroom_vacancy][date].delete(room_unit.room_id)
+          end
+
           date_vacancy
-        end :
-        room_units.reduce({}) do |date_vacancy, room_unit|
+        end
+      else
+        dm[:vacancy][date] = room_units.reduce({}) do |date_vacancy, room_unit|
           date_vacancy[room_unit.id] = {}
           date_vacancy
         end
+      end
 
       dm
     end
@@ -89,6 +106,19 @@ class Room < ApplicationRecord
 
   def update_date_map_from_assigned_subroom_bookings(date_map, bookings, start_date, end_date)
     each_booking_date(bookings, start_date, end_date) do |booking, date|
+      date_subroom_vacancy = date_map[:subroom_vacancy][date]
+
+      if date_subroom_vacancy.has_key?(booking.room_id)
+        assigned_unit = booking.room_unit_id
+        date_subroom_vacancy[booking.room_id].delete(assigned_unit)
+
+        if date_subroom_vacancy[booking.room_id].empty?
+          date_subroom_vacancy.delete(booking.room_id)
+        end
+
+        next
+      end
+
       date_vacancy = date_map[:vacancy][date]
 
       assigned_unit = date_vacancy.keys.find do |superroom_unit_id|
@@ -106,6 +136,19 @@ class Room < ApplicationRecord
 
   def update_date_map_from_unassigned_subroom_bookings(date_map, bookings, start_date, end_date)
     each_booking_date(bookings, start_date, end_date) do |booking, date|
+      date_subroom_vacancy = date_map[:subroom_vacancy][date]
+
+      if date_subroom_vacancy.has_key?(booking.room_id)
+        assigned_unit = date_subroom_vacancy[booking.room_id].keys.first
+        date_subroom_vacancy[booking.room_id].delete(assigned_unit)
+
+        if date_subroom_vacancy[booking.room_id].empty?
+          date_subroom_vacancy.delete(booking.room_id)
+        end
+
+        next
+      end
+
       date_vacancy = date_map[:vacancy][date]
 
       assigned_unit = date_vacancy.keys.min do |a_unit_id, b_unit_id|
