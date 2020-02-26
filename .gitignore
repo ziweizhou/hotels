@@ -24,3 +24,6 @@
 
 # Ignore Rubymine
 /.idea/*
+
+# Ignore local postgresql directory
+/.postgresql
